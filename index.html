@@ -1,0 +1,2826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamPro – Smart Quiz Management</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<!-- Firebase (Firestore) — compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="console.error('Firebase app SDK not loaded')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="console.error('Firestore SDK not loaded')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" onerror="console.error('Auth SDK not loaded')"></script>
+<!-- Firebase config (i-edit ang firebase-config.js) -->
+<script src="firebase-config.js" onerror="console.error('firebase-config.js not found')"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f8;color:#1a1f2e}
+
+/* ── LANDING (role picker) ─────────────────────── */
+#landing-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0f2f8;padding:20px}
+.landing-box{width:100%;max-width:480px;text-align:center}
+.landing-logo{width:72px;height:72px;border-radius:20px;background:#1a1f2e;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;color:#7fa4f0;box-shadow:0 8px 32px rgba(26,31,46,.18)}
+.landing-title{font-size:28px;font-weight:700;color:#1a1f2e;letter-spacing:-.5px}
+.landing-sub{font-size:14px;color:#9ca3af;margin-top:6px;margin-bottom:40px}
+.landing-cards{display:flex;gap:16px}
+.lcard{flex:1;background:#fff;border-radius:16px;border:.5px solid #e2e5ee;padding:28px 20px;cursor:pointer;text-align:center;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.lcard:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.11)}
+.lcard-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px}
+.lcard-admin .lcard-icon{background:rgba(59,91,219,.1);color:#3b5bdb}
+.lcard-student .lcard-icon{background:rgba(29,158,117,.1);color:#1d9e75}
+.lcard-name{font-size:15px;font-weight:700;color:#1a1f2e;margin-bottom:5px}
+.lcard-desc{font-size:12px;color:#9ca3af;line-height:1.5}
+.lcard-arrow{margin-top:16px;font-size:18px;color:#d1d5db;transition:color .2s}
+.lcard:hover .lcard-arrow{color:#3b5bdb}
+.lcard-student:hover .lcard-arrow{color:#1d9e75}
+.lcard-teacher .lcard-icon{background:rgba(124,92,230,.1);color:#7c5ce6}
+.lcard-teacher:hover .lcard-arrow{color:#7c5ce6}
+
+/* ── LOGIN PAGES ────────────────────────────────── */
+#admin-login-page,#student-login-page,#teacher-login-page{display:none;min-height:100vh;align-items:stretch}
+.login-left{width:420px;flex-shrink:0;background:#1a1f2e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 40px;position:relative;overflow:hidden}
+.login-left::before{content:'';position:absolute;width:320px;height:320px;border-radius:50%;background:rgba(99,130,220,.12);top:-80px;right:-80px}
+.login-left::after{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(29,158,117,.10);bottom:-40px;left:-40px}
+.ll-brand{position:relative;z-index:1;text-align:center;margin-bottom:32px}
+.ll-icon{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px}
+.ll-icon-admin{background:rgba(99,130,220,.2);border:1px solid rgba(99,130,220,.4);color:#7fa4f0}
+.ll-icon-student{background:rgba(29,158,117,.2);border:1px solid rgba(29,158,117,.4);color:#3ecfa0}
+.ll-icon-teacher{background:rgba(124,92,230,.2);border:1px solid rgba(124,92,230,.4);color:#a78bfa}
+.ll-name{font-size:26px;font-weight:700;color:#fff;letter-spacing:-.5px}
+.ll-sub{font-size:13px;color:#6b7a9a;margin-top:4px}
+.ll-info{position:relative;z-index:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:18px 20px;width:100%}
+.ll-info-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#5a6278;margin-bottom:10px}
+.ll-info-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:#9aa3ba}
+.ll-info-row:last-child{margin-bottom:0}
+.ll-info-row i{font-size:14px;color:#7fa4f0;flex-shrink:0}
+.ll-info-row.student-color i{color:#3ecfa0}
+
+.login-right{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 32px;background:#f0f2f8}
+.login-form-box{width:100%;max-width:380px;background:#fff;border-radius:14px;border:.5px solid #e2e5ee;padding:36px 32px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.lf-title{font-size:20px;font-weight:700;color:#1a1f2e;margin-bottom:4px}
+.lf-sub{font-size:13px;color:#9ca3af;margin-bottom:28px;line-height:1.5}
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px}
+.form-input{width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;color:#1a1f2e;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.form-input:focus{border-color:#3b5bdb;box-shadow:0 0 0 3px rgba(59,91,219,.1)}
+.form-input.student-focus:focus{border-color:#1d9e75;box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+.form-input.teacher-focus:focus{border-color:#7c5ce6;box-shadow:0 0 0 3px rgba(124,92,230,.1)}
+.form-input.ei{border-color:#ef4444}
+.form-error{font-size:11px;color:#ef4444;margin-top:5px;display:none}
+.btn-login{width:100%;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:inherit;margin-top:6px;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login:active{transform:scale(.98)}
+.btn-login-admin{background:#3b5bdb;color:#fff}
+.btn-login-admin:hover{background:#3451c7}
+.btn-login-student{background:#1d9e75;color:#fff}
+.btn-login-student:hover{background:#178a64}
+.btn-login-teacher{background:#7c5ce6;color:#fff}
+.btn-login-teacher:hover{background:#6947d0}
+.back-link{display:flex;align-items:center;gap:5px;font-size:12px;color:#9ca3af;cursor:pointer;margin-top:18px;justify-content:center;transition:color .15s}
+.back-link:hover{color:#374151}
+
+.login-err{display:none;background:#fee2e2;border:.5px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:16px;align-items:center;gap:7px}
+
+/* ── APP SHELL ──────────────────────────────────── */
+#app-page{display:none;height:100vh}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:225px;background:#1a1f2e;color:#c8cdd8;display:flex;flex-direction:column;flex-shrink:0}
+.sb-brand{padding:20px 18px 14px;border-bottom:.5px solid rgba(255,255,255,.08)}
+.sb-brand-name{font-size:15px;font-weight:700;color:#fff}
+.sb-brand-sub{font-size:11px;color:#7a8299;margin-top:2px}
+.sb-section{padding:14px 10px 4px;font-size:10px;letter-spacing:.08em;color:#5a6278;text-transform:uppercase}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 14px;font-size:13px;cursor:pointer;border-radius:6px;margin:1px 6px;color:#9aa3ba;transition:background .15s;user-select:none}
+.sb-item:hover{background:rgba(255,255,255,.07);color:#dde1ec}
+.sb-item.active{background:rgba(99,130,220,.18);color:#7fa4f0}
+.sb-item i{font-size:15px;flex-shrink:0}
+.atag{display:inline-flex;align-items:center;gap:4px;font-size:9px;padding:2px 6px;border-radius:20px;margin-left:auto;flex-shrink:0}
+.atag-a{background:rgba(99,130,220,.15);color:#7fa4f0}
+.atag-s{background:rgba(29,158,117,.15);color:#3ecfa0}
+.sb-footer{margin-top:auto;padding:14px 18px;border-top:.5px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px}
+.sb-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.av-a{background:rgba(99,130,220,.25);color:#7fa4f0}
+.av-s{background:rgba(29,158,117,.25);color:#3ecfa0}
+.av-t{background:rgba(124,92,230,.25);color:#a78bfa}
+.sb-uname{font-size:12px;color:#dde1ec;font-weight:600}
+.sb-urole{font-size:10px;color:#5a6278;margin-top:1px}
+.btn-logout{display:flex;align-items:center;gap:5px;margin-left:auto;background:none;border:none;color:#5a6278;font-size:11px;cursor:pointer;padding:4px 6px;border-radius:5px;font-family:inherit;transition:color .15s,background .15s}
+.btn-logout:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main-hdr{background:#fff;padding:15px 24px;border-bottom:.5px solid #e2e5ee;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.main-title{font-size:18px;font-weight:700;color:#1a1f2e}
+.role-pill{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px}
+.pill-a{background:rgba(59,91,219,.1);color:#3b5bdb}
+.pill-s{background:rgba(29,158,117,.1);color:#1d9e75}
+.pill-t{background:rgba(124,92,230,.1);color:#7c5ce6}
+.pill-dot{width:7px;height:7px;border-radius:50%}
+.dot-a{background:#3b5bdb}
+.dot-s{background:#1d9e75}
+.dot-t{background:#7c5ce6}
+.notice{display:none;align-items:center;gap:8px;padding:9px 24px;font-size:12px;flex-shrink:0}
+.n-admin{background:#eef2ff;color:#3b5bdb;border-bottom:.5px solid #c7d2fe}
+.n-student{background:#ecfdf5;color:#1d9e75;border-bottom:.5px solid #a7f3d0}
+.n-danger{background:#fee2e2;color:#991b1b;border-bottom:.5px solid #fca5a5}
+.main-body{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* ── COMPONENTS ─────────────────────────────────── */
+.card{background:#fff;border-radius:10px;border:.5px solid #e2e5ee;overflow:hidden}
+.card-hdr{padding:14px 20px;border-bottom:.5px solid #e2e5ee;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:#1a1f2e}
+.btn{font-size:12px;padding:6px 14px;border-radius:7px;cursor:pointer;border:.5px solid #d1d5db;background:#fff;color:#374151;font-family:inherit;transition:background .15s}
+.btn:hover{background:#f9fafb}
+.btn-primary{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+.btn-primary:hover{background:#3451c7}
+.btn-red{background:#ef4444;color:#fff;border-color:#ef4444}
+.btn-red:hover{background:#dc2626}
+.btn-sm{font-size:11px;padding:5px 10px}
+.btn-icon{padding:5px 9px;font-size:13px}
+.table-wrap{overflow-x:auto;width:100%}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th{padding:10px 16px;font-size:11px;letter-spacing:.05em;color:#6b7280;text-align:left;text-transform:uppercase;border-bottom:.5px solid #e2e5ee;white-space:nowrap;font-weight:600}
+td{padding:12px 16px;font-size:13px;color:#1a1f2e;border-bottom:.5px solid #f0f2f7;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.td-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-sub{font-size:11px;color:#9ca3af;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-flex;align-items:center;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;white-space:nowrap}
+.bm{background:#e8f0fe;color:#1a56db}
+.bh{background:#fef3c7;color:#92400e}
+.bs{background:#d1fae5;color:#065f46}
+.bq{background:#ede9fe;color:#5b21b6}
+.bp{background:#d1fae5;color:#065f46}
+.bf{background:#fee2e2;color:#991b1b}
+.ba{background:#d1fae5;color:#065f46}
+.bpend{background:#fef3c7;color:#92400e}
+.access-denied{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 20px;text-align:center}
+.access-denied i{font-size:44px;color:#d1d5db;margin-bottom:14px}
+.access-denied-title{font-size:15px;font-weight:700;color:#374151;margin-bottom:6px}
+.access-denied-sub{font-size:13px;color:#9ca3af;max-width:280px;line-height:1.6}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.metric{background:#fff;border-radius:10px;border:.5px solid #e2e5ee;padding:16px}
+.metric-lbl{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.metric-val{font-size:24px;font-weight:700;color:#1a1f2e}
+.metric-sub{font-size:11px;color:#9ca3af;margin-top:3px}
+
+/* ── MODAL ──────────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:600px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:fadeUp .25s ease}
+.modal-hdr{padding:18px 22px;border-bottom:.5px solid #e2e5ee;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:700;color:#1a1f2e}
+.modal-close{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:20px;padding:2px;line-height:1}
+.modal-close:hover{color:#374151}
+.modal-body{padding:22px;overflow-y:auto;flex:1}
+.modal-footer{padding:14px 22px;border-top:.5px solid #e2e5ee;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.fi{margin-bottom:16px}
+.fi label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px}
+.fi input,.fi textarea,.fi select{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;transition:border-color .15s,box-shadow .15s;background:#fff}
+.fi input:focus,.fi textarea:focus,.fi select:focus{border-color:#3b5bdb;box-shadow:0 0 0 3px rgba(59,91,219,.1)}
+.fi textarea{resize:vertical;min-height:70px}
+.fi-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.q-block{background:#f9fafb;border:.5px solid #e2e5ee;border-radius:8px;padding:14px;margin-bottom:12px}
+.q-block-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.q-block-num{font-size:12px;font-weight:700;color:#3b5bdb}
+.choice-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.choice-row input[type=radio]{accent-color:#3b5bdb;width:15px;height:15px;flex-shrink:0}
+.choice-row input[type=text]{flex:1}
+.add-choice-btn{font-size:11px;color:#3b5bdb;background:none;border:none;cursor:pointer;padding:2px 0;font-family:inherit}
+.add-choice-btn:hover{text-decoration:underline}
+
+/* ── EXAM CARDS ─────────────────────────────────── */
+.exam-cards-list{display:flex;flex-direction:column;gap:12px}
+.exam-card-item{background:#fff;border-radius:10px;border:.5px solid #e2e5ee;padding:18px 20px}
+.ec-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ec-title{font-size:14px;font-weight:700;color:#1a1f2e}
+.ec-desc{font-size:12px;color:#9ca3af;margin-top:3px}
+.ec-stats{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.ec-stat{font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px}
+.start-btn{background:#1d9e75;color:#fff;border:none;font-size:12px;padding:7px 16px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;transition:background .15s}
+.start-btn:hover{background:#178a64}
+
+/* ── EXAM TAKING SCREEN ──────────────────────────── */
+#exam-screen{display:none;position:fixed;inset:0;background:#f0f2f8;z-index:900;overflow-y:auto}
+.exam-topbar{background:#1a1f2e;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+.exam-topbar-title{font-size:14px;font-weight:700;color:#fff}
+.exam-topbar-student{font-size:12px;color:#7a8299}
+.exam-timer{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#7fa4f0;background:rgba(99,130,220,.15);padding:6px 14px;border-radius:20px}
+.exam-progress-bar{height:4px;background:#e2e5ee}
+.exam-progress-fill{height:4px;background:#3b5bdb;transition:width .3s}
+.exam-content{max-width:700px;margin:0 auto;padding:28px 20px}
+.exam-q-card{background:#fff;border-radius:12px;border:.5px solid #e2e5ee;padding:24px;margin-bottom:18px}
+.exam-q-num{font-size:11px;font-weight:700;color:#3b5bdb;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.exam-q-text{font-size:15px;font-weight:600;color:#1a1f2e;line-height:1.5;margin-bottom:18px}
+.choice-opt{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;border:1.5px solid #e2e5ee;margin-bottom:8px;cursor:pointer;transition:all .15s;user-select:none}
+.choice-opt:hover{border-color:#3b5bdb;background:#f0f4ff}
+.choice-opt.selected{border-color:#3b5bdb;background:#eef2ff}
+.choice-opt input[type=radio]{accent-color:#3b5bdb;width:16px;height:16px;flex-shrink:0}
+.choice-opt label{font-size:13px;color:#374151;cursor:pointer;flex:1}
+.exam-nav{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.exam-submit-btn{background:#1d9e75;color:#fff;border:none;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;cursor:pointer;font-family:inherit;transition:background .15s}
+.exam-submit-btn:hover{background:#178a64}
+
+/* ── RESULT SCREEN ───────────────────────────────── */
+#result-screen{display:none;position:fixed;inset:0;background:#f0f2f8;z-index:910;overflow-y:auto}
+.result-box{max-width:500px;margin:60px auto;background:#fff;border-radius:16px;border:.5px solid #e2e5ee;padding:40px;text-align:center}
+.result-icon{font-size:52px;margin-bottom:16px}
+.result-title{font-size:22px;font-weight:700;color:#1a1f2e;margin-bottom:6px}
+.result-sub{font-size:14px;color:#9ca3af;margin-bottom:28px}
+.result-score{font-size:48px;font-weight:700;margin-bottom:4px}
+.result-score.pass{color:#1d9e75}
+.result-score.fail{color:#ef4444}
+.result-status{font-size:14px;font-weight:600;padding:4px 18px;border-radius:20px;display:inline-block;margin-bottom:24px}
+.result-status.pass{background:#d1fae5;color:#065f46}
+.result-status.fail{background:#fee2e2;color:#991b1b}
+.result-details{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;text-align:left}
+.rd-item{background:#f9fafb;border-radius:8px;padding:12px 14px}
+.rd-lbl{font-size:11px;color:#9ca3af;margin-bottom:4px}
+.rd-val{font-size:14px;font-weight:600;color:#1a1f2e}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  LANDING — Choose Role                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="landing-page">
+  <div class="landing-box">
+    <div class="landing-logo"><i class="ti ti-school"></i></div>
+    <div class="landing-title">ExamPro</div>
+    <div class="landing-sub">Smart Quiz Management System — Who are you?</div>
+    <div class="landing-cards">
+      <div class="lcard lcard-admin" onclick="showAdminLogin()">
+        <div class="lcard-icon"><i class="ti ti-shield-check"></i></div>
+        <div class="lcard-name">Admin</div>
+        <div class="lcard-desc">Create and manage exams, quizzes, and the question bank</div>
+        <div class="lcard-arrow"><i class="ti ti-arrow-right"></i></div>
+      </div>
+      <div class="lcard lcard-student" onclick="showStudentLogin()">
+        <div class="lcard-icon"><i class="ti ti-user-graduate"></i></div>
+        <div class="lcard-name">Student</div>
+        <div class="lcard-desc">Enter your name and take your assigned exams</div>
+        <div class="lcard-arrow"><i class="ti ti-arrow-right"></i></div>
+      </div>
+      <div class="lcard lcard-teacher" onclick="showTeacherLogin()">
+        <div class="lcard-icon"><i class="ti ti-chalkboard"></i></div>
+        <div class="lcard-name">Teacher</div>
+        <div class="lcard-desc">Create exams, manage questions, and view class performance</div>
+        <div class="lcard-arrow"><i class="ti ti-arrow-right"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  ADMIN LOGIN — Username + Password          -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="admin-login-page" style="display:none;min-height:100vh;align-items:stretch">
+  <div class="login-left">
+    <div class="ll-brand">
+      <div class="ll-icon ll-icon-admin"><i class="ti ti-shield-check"></i></div>
+      <div class="ll-name">Admin Login</div>
+      <div class="ll-sub">ExamPro Management System</div>
+    </div>
+    <div class="ll-info">
+      <div class="ll-info-title">Admin Access</div>
+      <div class="ll-info-row"><i class="ti ti-notes"></i>Create &amp; manage exams and quizzes</div>
+      <div class="ll-info-row"><i class="ti ti-database"></i>Manage the question bank</div>
+      <div class="ll-info-row"><i class="ti ti-chart-bar"></i>View results and analytics</div>
+      <div class="ll-info-row"><i class="ti ti-users"></i>Manage students</div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-form-box">
+      <div id="admin-err" class="login-err">
+        <i class="ti ti-alert-circle" style="font-size:16px;flex-shrink:0"></i>
+        <span id="admin-err-msg"></span>
+      </div>
+      <div class="lf-title">Welcome back, Admin</div>
+      <div class="lf-sub">Enter your credentials to access the management panel.</div>
+      <div class="form-group">
+        <label class="form-label" id="a-un-label">Username</label>
+        <input class="form-input" type="text" id="a-un" placeholder="Enter your username">
+        <div class="form-error" id="a-err-un">Username is required.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="a-pw" placeholder="Enter your password">
+        <div class="form-error" id="a-err-pw">Password is required.</div>
+      </div>
+      <button class="btn-login btn-login-admin" onclick="doAdminLogin()">
+        <i class="ti ti-login"></i> Sign In as Admin
+      </button>
+      <div id="a-auth-links" style="display:none;justify-content:center;gap:18px;margin-top:14px;font-size:13px">
+        <a href="#" style="color:#2563eb;text-decoration:none" onclick="staffRegister('admin');return false">Create account</a>
+        <a href="#" style="color:#2563eb;text-decoration:none" onclick="forgotPassword('a-un');return false">Forgot password?</a>
+      </div>
+
+      <div class="back-link" onclick="showLanding()">
+        <i class="ti ti-arrow-left" style="font-size:13px"></i> Back to role selection
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  STUDENT LOGIN — Username + Password        -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="student-login-page" style="display:none;min-height:100vh;align-items:stretch">
+  <div class="login-left" style="background:#0f2318">
+    <div class="ll-brand">
+      <div class="ll-icon ll-icon-student"><i class="ti ti-user-graduate"></i></div>
+      <div class="ll-name">Student Portal</div>
+      <div class="ll-sub">ExamPro Smart Quiz System</div>
+    </div>
+    <div class="ll-info" style="border-color:rgba(29,158,117,.25)">
+      <div class="ll-info-title">How it works</div>
+      <div class="ll-info-row student-color"><i class="ti ti-pencil"></i>Enter your full name to get started</div>
+      <div class="ll-info-row student-color"><i class="ti ti-list-check"></i>Choose from your available exams</div>
+      <div class="ll-info-row student-color"><i class="ti ti-clock"></i>Complete the exam within the time limit</div>
+      <div class="ll-info-row student-color"><i class="ti ti-trophy"></i>See your score instantly after submitting</div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-form-box">
+      <div style="width:52px;height:52px;border-radius:14px;background:rgba(29,158,117,.1);display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:24px;color:#1d9e75">
+        <i class="ti ti-user-graduate"></i>
+      </div>
+      <div class="lf-title">Hello, Student!</div>
+      <div class="lf-sub" id="s-sub">Just enter your full name below and you'll be taken straight to your available exams. No password needed.</div>
+      <div id="s-legacy-box">
+      <div class="form-group">
+        <label class="form-label">Your Full Name</label>
+        <input class="form-input student-focus" type="text" id="s-name" placeholder="e.g. Juan dela Cruz" autocomplete="name">
+        <div class="form-error" id="s-err-name">Please enter your name.</div>
+      </div>
+      <button class="btn-login btn-login-student" onclick="doStudentLogin()">
+        <i class="ti ti-arrow-right"></i> Enter &amp; Take Exam
+      </button></div>
+      <div id="s-auth-box" style="display:none">
+        <div id="s-auth-err" class="login-err">
+          <i class="ti ti-alert-circle" style="font-size:16px;flex-shrink:0"></i>
+          <span id="s-auth-err-msg"></span>
+        </div>
+        <div id="s-reg-fields" style="display:none">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input student-focus" type="text" id="s-reg-name" placeholder="e.g. Juan dela Cruz" autocomplete="name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input student-focus" type="email" id="s-email" placeholder="Enter your email" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input student-focus" type="password" id="s-pw" placeholder="At least 6 characters" autocomplete="current-password">
+        </div>
+        <button class="btn-login btn-login-student" id="s-auth-btn" onclick="studentAuthSubmit()">
+          <i class="ti ti-login"></i> Sign In
+        </button>
+        <div style="display:flex;justify-content:center;gap:18px;margin-top:14px;font-size:13px;flex-wrap:wrap">
+          <a href="#" id="s-toggle" style="color:#1d9e75;text-decoration:none" onclick="toggleStudentMode();return false">Wala pang account? Mag-register</a>
+          <a href="#" style="color:#1d9e75;text-decoration:none" onclick="forgotPassword('s-email');return false">Forgot password?</a>
+        </div>
+      </div>
+      <div class="back-link" onclick="showLanding()">
+        <i class="ti ti-arrow-left" style="font-size:13px"></i> Back to role selection
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  TEACHER LOGIN — Username + Password        -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="teacher-login-page" style="display:none;min-height:100vh;align-items:stretch">
+  <div class="login-left" style="background:#171126">
+    <div class="ll-brand">
+      <div class="ll-icon ll-icon-teacher"><i class="ti ti-chalkboard"></i></div>
+      <div class="ll-name">Teacher Portal</div>
+      <div class="ll-sub">ExamPro Smart Quiz System</div>
+    </div>
+    <div class="ll-info" style="border-color:rgba(124,92,230,.25)">
+      <div class="ll-info-title">Teacher Access</div>
+      <div class="ll-info-row"><i class="ti ti-notes" style="color:#a78bfa"></i>Create &amp; manage exams and quizzes</div>
+      <div class="ll-info-row"><i class="ti ti-database" style="color:#a78bfa"></i>Create, store &amp; organize questions</div>
+      <div class="ll-info-row"><i class="ti ti-chart-bar" style="color:#a78bfa"></i>View class performance and results</div>
+      <div class="ll-info-row"><i class="ti ti-checkup-list" style="color:#a78bfa"></i>Review automatically graded results</div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-form-box">
+      <div id="teacher-err" class="login-err">
+        <i class="ti ti-alert-circle" style="font-size:16px;flex-shrink:0"></i>
+        <span id="teacher-err-msg"></span>
+      </div>
+      <div style="width:52px;height:52px;border-radius:14px;background:rgba(124,92,230,.1);display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:24px;color:#7c5ce6">
+        <i class="ti ti-chalkboard"></i>
+      </div>
+      <div class="lf-title">Welcome, Teacher!</div>
+      <div class="lf-sub">Sign in to create exams, manage your question bank, and view your class performance.</div>
+      <div class="form-group">
+        <label class="form-label" id="t-un-label">Username</label>
+        <input class="form-input teacher-focus" type="text" id="t-un" placeholder="Enter your username">
+        <div class="form-error" id="t-err-un">Username is required.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input teacher-focus" type="password" id="t-pw" placeholder="Enter your password">
+        <div class="form-error" id="t-err-pw">Password is required.</div>
+      </div>
+      <button class="btn-login btn-login-teacher" onclick="doTeacherLogin()">
+        <i class="ti ti-login"></i> Sign In as Teacher
+      </button>
+      <div id="t-auth-links" style="display:none;justify-content:center;gap:18px;margin-top:14px;font-size:13px">
+        <a href="#" style="color:#2563eb;text-decoration:none" onclick="staffRegister('teacher');return false">Create account</a>
+        <a href="#" style="color:#2563eb;text-decoration:none" onclick="forgotPassword('t-un');return false">Forgot password?</a>
+      </div>
+      <div class="back-link" onclick="showLanding()">
+        <i class="ti ti-arrow-left" style="font-size:13px"></i> Back to role selection
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  APP PAGE                                   -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="app-page">
+  <div class="app">
+    <div class="sidebar">
+      <div class="sb-brand">
+        <div class="sb-brand-name">ExamPro</div>
+        <div class="sb-brand-sub">Smart Quiz Management</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding-top:6px">
+        <div class="sb-section">Overview</div>
+        <div class="sb-item" id="nav-dashboard" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+        <div class="sb-section">Exams</div>
+        <div class="sb-item" id="nav-exams" onclick="nav('exams')">
+          <i class="ti ti-notes"></i>Exams &amp; Quizzes
+          <span class="atag atag-a" id="tag-exams"><i class="ti ti-lock" style="font-size:9px"></i>Admin</span>
+        </div>
+        <div class="sb-item" id="nav-qbank" onclick="nav('qbank')">
+          <i class="ti ti-database"></i>Question Bank
+          <span class="atag atag-a" id="tag-qbank"><i class="ti ti-lock" style="font-size:9px"></i>Admin</span>
+        </div>
+        <div class="sb-item" id="nav-take" onclick="nav('take')">
+          <i class="ti ti-pencil"></i>Take Exam
+        </div>
+        <div class="sb-section">Analytics</div>
+        <div class="sb-item" id="nav-results" onclick="nav('results')"><i class="ti ti-chart-bar"></i><span id="results-nav-label">Results</span></div>
+        <div class="sb-item" id="nav-students" onclick="nav('students')"><i class="ti ti-users"></i>Students</div>
+        <div class="sb-item" id="nav-settings" onclick="nav('settings')"><i class="ti ti-settings"></i>System Settings</div>
+        <div class="sb-item" id="nav-logs" onclick="nav('logs')"><i class="ti ti-list-details"></i>Exam Logs</div>
+      </div>
+      <div class="sb-footer">
+        <div class="sb-av" id="sb-av">AU</div>
+        <div>
+          <div class="sb-uname" id="sb-name">Admin User</div>
+          <div class="sb-urole" id="sb-role">Administrator</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Log out"><i class="ti ti-logout" style="font-size:15px"></i></button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="main-hdr">
+        <div class="main-title" id="page-title">Dashboard</div>
+        <div class="role-pill" id="role-pill">
+          <div class="pill-dot dot-a" id="pill-dot"></div>
+          <span id="pill-txt">Administrator</span>
+        </div>
+      </div>
+      <div class="notice" id="notice"></div>
+      <div class="main-body" id="main-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EXAM TAKING ═══════════ -->
+<div id="exam-screen">
+  <div class="exam-topbar">
+    <div>
+      <div class="exam-topbar-title" id="et-title">Exam Title</div>
+      <div class="exam-topbar-student" id="et-student"></div>
+    </div>
+    <div class="exam-timer"><i class="ti ti-clock"></i><span id="timer-display">00:00</span></div>
+  </div>
+  <div class="exam-progress-bar"><div class="exam-progress-fill" id="exam-prog"></div></div>
+  <div class="exam-content" id="exam-content"></div>
+</div>
+
+<!-- ═══════════ RESULT SCREEN ═══════════ -->
+<div id="result-screen">
+  <div class="result-box">
+    <div class="result-icon" id="r-icon">🎉</div>
+    <div class="result-title" id="r-title">Exam Complete!</div>
+    <div class="result-sub" id="r-sub">Here are your results</div>
+    <div class="result-score" id="r-score">88%</div>
+    <div class="result-status" id="r-status">Passed</div>
+    <div class="result-details" id="r-details"></div>
+    <button class="btn btn-primary" onclick="closeResult()">Back to Take Exam</button>
+  </div>
+</div>
+
+<!-- ═══════════ MODALS ═══════════ -->
+<!-- Create/Edit Exam Modal -->
+<div class="modal-overlay" id="modal-exam">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-exam-title">Create Exam</div>
+      <button class="modal-close" onclick="closeModal('modal-exam')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="fi-row">
+        <div class="fi"><label>Exam Title *</label><input type="text" id="ex-title" placeholder="e.g. Algebra Fundamentals"></div>
+        <div class="fi"><label>Subject *</label>
+          <select id="ex-subject">
+            <option value="">Select subject</option>
+            <option>Mathematics</option><option>History</option><option>Science</option>
+            <option>English</option><option>Quanti</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="fi"><label>Description</label><textarea id="ex-desc" placeholder="Brief description of this exam..."></textarea></div>
+      <div class="fi-row">
+        <div class="fi"><label>Duration (minutes) *</label><input type="number" id="ex-dur" placeholder="e.g. 45" min="1"></div>
+        <div class="fi"><label>Pass Score (%) *</label><input type="number" id="ex-pass" placeholder="e.g. 75" min="1" max="100"></div>
+      </div>
+      <div style="border-top:.5px dashed #e2e5ee;margin:4px 0 16px;padding-top:14px">
+        <div style="font-size:13px;font-weight:700;color:#1a1f2e;margin-bottom:10px"><i class="ti ti-shield-lock" style="font-size:13px;margin-right:4px"></i>Security &amp; Access Control</div>
+        <div class="fi-row">
+          <div class="fi"><label>Opens At (optional)</label><input type="datetime-local" id="ex-start-window"></div>
+          <div class="fi"><label>Closes At (optional)</label><input type="datetime-local" id="ex-end-window"></div>
+        </div>
+        <div class="fi">
+          <label>Access Code(s) <span style="font-weight:400;color:#9ca3af">— the code your teacher gives when the exam starts (one shared code for the whole class). Each student account can enter an exam only once. Leave blank if no code is required.</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="ex-access-codes" placeholder="e.g. XJ29KP, QW83ZT" style="flex:1">
+            <button type="button" class="btn btn-sm" onclick="generateAccessCodes()" style="flex-shrink:0">Generate code</button>
+          </div>
+        </div>
+        <div class="fi" style="margin-bottom:0">
+          <label>IP Whitelist (optional) <span style="font-weight:400;color:#9ca3af">— comma separated IPs; best-effort client-side check only</span></label>
+          <input type="text" id="ex-ip-whitelist" placeholder="e.g. 203.0.113.5, 203.0.113.6">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:#1a1f2e">Questions</div>
+        <button class="btn btn-sm" onclick="addQuestion()"><i class="ti ti-plus" style="font-size:12px;margin-right:3px"></i>Add Question</button>
+      </div>
+      <div id="questions-container"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-exam')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExam()">Save Exam</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Question Bank Modal -->
+<div class="modal-overlay" id="modal-qbank">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-qbank-title">Add Question</div>
+      <button class="modal-close" onclick="closeModal('modal-qbank')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="fi"><label>Question Text *</label><textarea id="qb-text" placeholder="Enter your question here..."></textarea></div>
+      <div class="fi-row">
+        <div class="fi"><label>Subject *</label>
+          <select id="qb-subject">
+            <option value="">Select subject</option>
+            <option>Mathematics</option><option>History</option><option>Science</option>
+            <option>English</option><option>Quanti</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fi"><label>Type *</label>
+          <select id="qb-type" onchange="renderQBTypeFields()">
+            <option value="">Select type</option>
+            <option value="mc">Multiple Choice</option>
+            <option value="tf">True / False</option>
+            <option value="sa">Short Answer</option>
+          </select>
+        </div>
+      </div>
+      <div class="fi"><label>Difficulty *</label>
+        <select id="qb-diff">
+          <option value="">Select difficulty</option>
+          <option>Easy</option><option>Medium</option><option>Hard</option>
+        </select>
+      </div>
+      <div id="qb-type-fields"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-qbank')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveQBQuestion()">Save Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Student Modal -->
+<div class="modal-overlay" id="modal-student">
+  <div class="modal" style="width:440px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-student-title">Add Student</div>
+      <button class="modal-close" onclick="closeModal('modal-student')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="fi"><label>Full Name *</label><input type="text" id="st-name" placeholder="e.g. Juan dela Cruz"></div>
+      <div class="fi"><label>Email *</label><input type="email" id="st-email" placeholder="e.g. juan@school.edu"></div>
+      <div class="fi-row">
+        <div class="fi"><label>Section</label><input type="text" id="st-section" placeholder="e.g. BSIT 3-A"></div>
+        <div class="fi"><label>Status</label>
+          <select id="st-status">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-student')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStudent()">Save Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Access Code Modal -->
+<div class="modal-overlay" id="modal-access">
+  <div class="modal" style="width:380px">
+    <div class="modal-hdr">
+      <div class="modal-title"><i class="ti ti-key" style="font-size:15px;margin-right:5px"></i>Enter Access Code</div>
+      <button class="modal-close" onclick="closeModal('modal-access')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:#6b7280;margin-bottom:14px">This exam requires an access code from your instructor. Each student account can enter an exam only once.</p>
+      <div class="fi"><label>Access Code *</label><input type="text" id="access-code-input" placeholder="e.g. XJ29KP" style="text-transform:uppercase">
+        <div class="form-error" id="access-code-err">Invalid access code.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-access')">Cancel</button>
+      <button class="btn btn-primary" onclick="verifyAccessCode()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="width:380px">
+    <div class="modal-hdr">
+      <div class="modal-title">Confirm Delete</div>
+      <button class="modal-close" onclick="closeModal('modal-confirm')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#374151;line-height:1.6" id="confirm-msg">Are you sure you want to delete this item?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-confirm')">Cancel</button>
+      <button class="btn btn-red" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="db-badge" onclick="reconnectDatabase()" style="display:none;position:fixed;right:12px;bottom:12px;z-index:900;padding:6px 12px;border-radius:999px;font:600 11px/1.2 system-ui,sans-serif;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)"></div>
+<script>
+/* ─── DATABASE LAYER: Firebase Firestore (NoSQL) ─────────────────── */
+// Pangunahing database: Firebase Firestore (NoSQL, JSON documents).
+// Kung hindi maabot ang Firebase, awtomatikong gagamit ng Local JSON (localStorage) bilang backup mode.
+// Collections (documents): users, exams, questions, question_bank, exam_results, system_settings, exam_logs
+const DB_TABLES = ['users','exams','questions','question_bank','exam_results','system_settings','exam_logs','exam_entries'];
+const LS_KEY = 'smartquiz_exam_db_v1';
+const DB_SEED = {"users": [], "exams": [], "questions": [], "question_bank": [], "exam_results": [], "system_settings": [{"id": 1, "setting_key": "examNotifications", "setting_name": "Exam Notifications", "setting_value": "true", "description": "Enable exam-related notifications."}, {"id": 2, "setting_key": "autoGrading", "setting_name": "Automatic Grading", "setting_value": "true", "description": "Automatically calculate objective exam scores."}, {"id": 3, "setting_key": "antiCheating", "setting_name": "Anti-Cheating Monitoring", "setting_value": "true", "description": "Enable basic exam activity monitoring."}, {"id": 4, "setting_key": "resultNotifications", "setting_name": "Result Notifications", "setting_value": "true", "description": "Enable result notification behavior."}], "exam_logs": [{"id": 1, "action": "System database initialized", "user_name": "System", "user_id": null, "created_at": "2026-05-01T08:00:00+08:00"}]};
+
+const clone = o => JSON.parse(JSON.stringify(o));
+const nowISO = () => new Date().toISOString();
+const sameVal = (a, b) => a === b || (a != null && b != null && String(a) === String(b));
+function normalizeDB(obj) {
+  const out = {};
+  DB_TABLES.forEach(t => { out[t] = Array.isArray(obj && obj[t]) ? obj[t] : []; });
+  return out;
+}
+const chunkArr = (arr, n) => { const o = []; for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n)); return o; };
+const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg || 'timeout')), ms))]);
+
+const DB_DEFAULTS = {
+  users:           () => ({ username:null, password:null, email:null, section:null, initials:null, role:'student', status:'Active', created_at:nowISO(), updated_at:nowISO() }),
+  exams:           () => ({ description:null, duration:30, pass_score:75, attempts_count:0, created_by:null, status:'Active', start_window:null, end_window:null, access_codes:null, used_codes:[], ip_whitelist:null, created_at:nowISO(), updated_at:nowISO() }),
+  questions:       () => ({ correct_answer_index:null, correct_answer_text:null, points:1, order_index:1, choices:null, created_at:nowISO() }),
+  question_bank:   () => ({ difficulty:'Easy', correct_answer_index:null, correct_answer_text:null, choices:null, created_by:null, created_at:nowISO(), updated_at:nowISO() }),
+  exam_results:    () => ({ user_id:null, total_questions:0, correct_answers:0, passed:false, answers:[], submitted_at:nowISO() }),
+  system_settings: () => ({ description:null, updated_at:nowISO() }),
+  exam_logs:       () => ({ user_id:null, ip_address:null, created_at:nowISO() }),
+  exam_entries:    () => ({ blocked_attempts:0, status:'In progress', entered_at:nowISO(), submitted_at:null })
+};
+const DB_UNIQUE = { users:['username','email'], system_settings:['setting_key'] };
+
+/* ── Driver 1: Local JSON (localStorage) — backup mode ── */
+function makeLocalDriver() {
+  let data = null;
+  const persist = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch (e) { console.error('❌ Hindi ma-save sa localStorage:', e); } };
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) data = normalizeDB(JSON.parse(raw)); } catch (e) { console.warn('⚠️ Sira ang local JSON, ibabalik sa default:', e); }
+  if (!data) { data = normalizeDB(clone(DB_SEED)); persist(); }
+  return {
+    name: 'local',
+    async list(t) { if (!data[t]) throw new Error(`Collection "${t}" does not exist`); return clone(data[t]); },
+    async set(t, row) { const i = data[t].findIndex(r => sameVal(r.id, row.id)); const c = clone(row); if (i >= 0) data[t][i] = c; else data[t].push(c); persist(); },
+    async remove(t, id) { data[t] = data[t].filter(r => !sameVal(r.id, id)); persist(); },
+    async nextId(t) { return data[t].reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1; },
+    async claim(t, id, row) { const ex = data[t].find(r => sameVal(r.id, id)); if (ex) return { ok:false, existing:clone(ex) }; data[t].push(clone(row)); persist(); return { ok:true }; },
+    async dump() { return clone(data); },
+    async load(obj) { data = normalizeDB(clone(obj)); persist(); },
+    async isEmpty() { return data.users.length === 0; }
+  };
+}
+
+/* ── Driver 2: Firebase Firestore ── */
+function makeFirestoreDriver(fs) {
+  const col = t => fs.collection(t);
+  return {
+    name: 'firestore',
+    async list(t, o = {}) {
+      if (o.id != null) { const d = await col(t).doc(String(o.id)).get(); return d.exists ? [d.data()] : []; }
+      let q = col(t);
+      if (o.where) q = q.where(o.where[0], '==', o.where[1]);
+      else if (o.ord && o.lim != null && !o.hasFilters) q = q.orderBy(o.ord.c, o.ord.asc ? 'asc' : 'desc').limit(o.lim);
+      const snap = await q.get();
+      return snap.docs.map(d => d.data());
+    },
+    async set(t, row) { const c = clone(row); await col(t).doc(String(c.id)).set(c); },
+    async remove(t, id) { await col(t).doc(String(id)).delete(); },
+    async nextId(t) {
+      const top = await col(t).orderBy('id', 'desc').limit(1).get();
+      const maxId = top.empty ? 0 : (Number(top.docs[0].data().id) || 0);
+      const ref = fs.collection('_meta').doc('counters');
+      return fs.runTransaction(async tx => {
+        const s = await tx.get(ref);
+        const cur = s.exists ? (Number(s.data()[t]) || 0) : 0;
+        const next = Math.max(cur, maxId) + 1;
+        tx.set(ref, { [t]: next }, { merge: true });
+        return next;
+      });
+    },
+    // Isang beses lang magagawa ang dokumento; kung meron na, hindi papayagan (atomic, sa database mismo titingnan)
+    async claim(t, id, row) {
+      const ref = col(t).doc(String(id));
+      return fs.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        if (snap.exists) return { ok:false, existing:snap.data() };
+        tx.set(ref, clone(row));
+        return { ok:true };
+      });
+    },
+    async dump() {
+      const out = {};
+      for (const t of DB_TABLES) {
+        const s = await col(t).get();
+        out[t] = s.docs.map(d => d.data()).sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+      }
+      return out;
+    },
+    async load(obj) {
+      const data = normalizeDB(clone(obj));
+      for (const t of DB_TABLES) {            // 1. burahin ang lumang laman
+        const s = await col(t).get();
+        for (const part of chunkArr(s.docs, 400)) { const b = fs.batch(); part.forEach(d => b.delete(d.ref)); await b.commit(); }
+      }
+      const counters = {};
+      for (const t of DB_TABLES) {            // 2. isulat ang bagong laman
+        let mx = 0;
+        data[t].forEach(r => { if (r.id != null) mx = Math.max(mx, Number(r.id) || 0); });
+        data[t].forEach(r => { if (r.id == null) r.id = ++mx; });
+        counters[t] = mx;
+        for (const part of chunkArr(data[t], 400)) { const b = fs.batch(); part.forEach(r => b.set(col(t).doc(String(r.id)), r)); await b.commit(); }
+      }
+      await fs.collection('_meta').doc('counters').set(counters);
+    },
+    async isEmpty() { const s = await col('users').limit(1).get(); return s.empty; }
+  };
+}
+
+/* ── Query builder (parehong style ng dating .from().select().eq()...) ── */
+class Query {
+  constructor(drv, table) {
+    this.drv = drv; this.t = table; this.op = 'select'; this.cols = '*'; this.filters = [];
+    this.ord = null; this.lim = null; this.mode = 'many'; this.payload = null; this.returning = false;
+  }
+  select(cols = '*') { this.cols = cols; if (this.op !== 'select') this.returning = true; return this; }
+  insert(p) { this.op = 'insert'; this.payload = p; return this; }
+  update(p) { this.op = 'update'; this.payload = p; return this; }
+  delete()  { this.op = 'delete'; return this; }
+  eq(c, v)  { this.filters.push([c, v]); return this; }
+  order(c, o = {}) { this.ord = { c, asc: o.ascending !== false }; return this; }
+  limit(n)  { this.lim = n; return this; }
+  single()  { this.mode = 'single'; return this; }
+  maybeSingle() { this.mode = 'maybe'; return this; }
+  then(res, rej) { return this._run().then(res, rej); }
+
+  _match(r) { return this.filters.every(([c, v]) => sameVal(r[c], v)); }
+  async _fetch() {
+    const opts = { hasFilters: this.filters.length > 0, ord: this.ord, lim: this.lim };
+    const idF = this.filters.find(f => f[0] === 'id');
+    if (idF) opts.id = idF[1];
+    else { const sf = this.filters.find(f => typeof f[1] === 'string'); if (sf) opts.where = sf; }
+    const rows = await this.drv.list(this.t, opts);
+    return rows.filter(r => this._match(r));
+  }
+  async _project(r) {
+    const spec = this.cols;
+    if (spec.trim() === '*') return r;
+    const nested = {};
+    const flat = spec.replace(/(\w+)\s*\(([^)]*)\)/g, (m, name, inner) => { nested[name] = inner; return ''; });
+    const names = flat.split(',').map(s => s.trim()).filter(Boolean);
+    const o = names.includes('*') ? { ...r } : {};
+    names.forEach(n => { if (n !== '*') o[n] = r[n]; });
+    for (const [name, inner] of Object.entries(nested)) {
+      if (name === 'questions' && this.t === 'exams') {
+        const qc = inner.split(',').map(s => s.trim()).filter(Boolean);
+        const all = await this.drv.list('questions', {});
+        o.questions = all.filter(q => sameVal(q.exam_id, r.id)).map(q => { const x = {}; qc.forEach(c => { x[c] = q[c]; }); return x; });
+      }
+    }
+    return o;
+  }
+  _finish(rows) {
+    if (this.mode === 'single') {
+      if (rows.length === 1) return { data: rows[0], error: null };
+      return { data: null, error: { message: rows.length ? 'Multiple rows returned' : 'No rows found', code: 'PGRST116' } };
+    }
+    if (this.mode === 'maybe') {
+      if (rows.length <= 1) return { data: rows[0] || null, error: null };
+      return { data: null, error: { message: 'Multiple rows returned', code: 'PGRST116' } };
+    }
+    return { data: rows, error: null };
+  }
+  async _checkUnique(row) {
+    for (const c of (DB_UNIQUE[this.t] || [])) {
+      if (row[c] == null || row[c] === '') continue;
+      const same = await this.drv.list(this.t, typeof row[c] === 'string' ? { where: [c, row[c]] } : {});
+      if (same.some(r => r[c] === row[c] && !sameVal(r.id, row.id))) {
+        return { message: `duplicate key value violates unique constraint "${this.t}_${c}_key"`, code: '23505' };
+      }
+    }
+    return null;
+  }
+  async _run() {
+    try {
+      if (!DB_TABLES.includes(this.t)) return { data: null, error: { message: `Collection "${this.t}" does not exist` } };
+
+      if (this.op === 'select') {
+        let out = await this._fetch();
+        if (this.ord) {
+          const { c, asc } = this.ord;
+          out.sort((a, b) => {
+            const x = a[c], y = b[c];
+            if (x == null && y == null) return 0;
+            if (x == null) return 1; if (y == null) return -1;
+            const r = (typeof x === 'number' && typeof y === 'number') ? x - y : String(x).localeCompare(String(y));
+            return asc ? r : -r;
+          });
+        }
+        if (this.lim != null) out = out.slice(0, this.lim);
+        const proj = [];
+        for (const r of out) proj.push(await this._project(r));
+        return this._finish(proj);
+      }
+
+      if (this.op === 'insert') {
+        const items = Array.isArray(this.payload) ? this.payload : [this.payload];
+        const created = [];
+        for (const item of items) {
+          const row = { ...DB_DEFAULTS[this.t](), ...clone(item) };
+          if (row.id == null) row.id = await this.drv.nextId(this.t);
+          const err = await this._checkUnique(row);
+          if (err) return { data: null, error: err };
+          await this.drv.set(this.t, row);
+          created.push(row);
+        }
+        if (!this.returning) return { data: null, error: null };
+        const proj = []; for (const r of created) proj.push(await this._project(clone(r)));
+        return this._finish(proj);
+      }
+
+      if (this.op === 'update') {
+        const hit = await this._fetch();
+        const done = [];
+        for (const r of hit) {
+          const merged = { ...r, ...clone(this.payload) };
+          if ('updated_at' in r) merged.updated_at = nowISO();
+          const err = await this._checkUnique(merged);
+          if (err) return { data: null, error: err };
+          await this.drv.set(this.t, merged);
+          done.push(merged);
+        }
+        if (!this.returning) return { data: null, error: null };
+        const proj = []; for (const r of done) proj.push(await this._project(clone(r)));
+        return this._finish(proj);
+      }
+
+      if (this.op === 'delete') {
+        const gone = await this._fetch();
+        for (const r of gone) {
+          await this.drv.remove(this.t, r.id);
+          if (this.t === 'exams') {   // cascade: burahin din ang questions ng exam
+            const qs = await this.drv.list('questions', {});
+            for (const q of qs.filter(q => sameVal(q.exam_id, r.id))) await this.drv.remove('questions', q.id);
+          }
+        }
+        return { data: null, error: null };
+      }
+      return { data: null, error: { message: 'Unsupported operation' } };
+    } catch (e) {
+      console.error('❌ Database error:', e);
+      return { data: null, error: { message: friendlyDbError(e), code: e && e.code } };
+    }
+  }
+}
+
+function friendlyDbError(e) {
+  const m = String((e && (e.code ? e.code + ' ' : '') + (e.message || '')) || e);
+  if (/permission-denied|insufficient permissions/i.test(m)) return 'Permission denied — i-update ang Firestore Rules (tingnan ang firestore.rules).';
+  if (/not-found|does not exist|NOT_FOUND/i.test(m)) return 'Wala pang Firestore Database sa project — i-click ang "Create database" sa Firebase Console.';
+  if (/unavailable|timeout|network|offline|Failed to get/i.test(m)) return 'Hindi maabot ang Firebase (walang internet o naka-block).';
+  return m;
+}
+
+/* ── Database manager ── */
+let dbBackend = 'connecting';   // 'firestore' | 'local' | 'connecting'
+let dbWhy = '';
+const db = {
+  _drv: makeLocalDriver(),
+  from(t) { return new Query(this._drv, t); },
+  snapshot() { return this._drv.dump(); },
+  replaceAll(obj) { return this._drv.load(obj); },
+  reset() { return this._drv.load(authMode ? authSeed() : DB_SEED); }
+};
+var dbReady = Promise.resolve();
+
+function setDbBadge() {
+  const el = document.getElementById('db-badge'); if (!el) return;
+  let inApp = false; try { inApp = !!(S && S.role); } catch (e) {}
+  if (inApp && dbBackend === 'firestore') { el.style.display = 'none'; return; }   // nakatago kapag naka-login at connected (hindi matakpan ang Log out)
+  const st = {
+    connecting: ['⏳ Connecting to Firebase…', '#fef9c3', '#854d0e'],
+    firestore:  ['🔥 Firebase Firestore' + (authMode ? ' + Authentication' : '') + ' — Connected', '#dcfce7', '#166534'],
+    local:      ['⚠ Offline mode (Local JSON) — click to retry', '#fee2e2', '#991b1b']
+  }[dbBackend];
+  el.textContent = st[0]; el.style.background = st[1]; el.style.color = st[2];
+  el.title = dbBackend === 'local' ? ('Hindi naka-connect sa Firebase: ' + dbWhy) : '';
+  el.style.display = 'block';
+}
+
+let authMode = false;   // true kapag may Firebase Authentication
+let fbAuth = null;
+
+// Sample data para sa Authentication mode: walang admin/teacher na may password (sa Firebase Auth na ang login)
+function authSeed() {
+  const s = clone(DB_SEED);
+  s.users = s.users.filter(u => u.role === 'student').map(u => ({ ...u, username: null, password: null }));
+  s.exam_logs[0].action = 'System database initialized (Firebase)';
+  return s;
+}
+
+async function initDatabase() {
+  dbBackend = 'connecting'; dbWhy = ''; authMode = false; fbAuth = null; setDbBadge();
+  const cfg = window.FIREBASE_CONFIG;
+  let drv = null;
+  if (!cfg || !cfg.projectId || /PASTE_|YOUR_/i.test(String(cfg.apiKey) + String(cfg.projectId))) {
+    dbWhy = 'Hindi pa nalalagay ang Firebase config sa firebase-config.js';
+  } else if (typeof firebase === 'undefined') {
+    dbWhy = 'Hindi na-load ang Firebase library (walang internet o naka-block ang CDN)';
+  } else {
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(cfg);
+      const fs = firebase.firestore();
+      try { fs.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
+      const candidate = makeFirestoreDriver(fs);
+      if (typeof firebase.auth === 'function') {
+        fbAuth = firebase.auth();
+        try { await fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch (e) {}
+        authMode = true;
+      }
+      try {
+        await withTimeout(candidate.isEmpty(), 12000, 'timeout');   // connection / permission check lang
+      } catch (e) {
+        if (/permission-denied|insufficient permissions/i.test(String((e && e.code) || '') + ' ' + String((e && e.message) || ''))) {
+          console.log('🔒 Kailangan ng sign-in para mabasa ang Firestore — normal ito kapag naka-set ang rules.');
+        } else { throw e; }
+      }
+      drv = candidate;
+    } catch (e) {
+      dbWhy = friendlyDbError(e); authMode = false; fbAuth = null;
+      console.error('❌ Firebase connection failed:', e);
+    }
+  }
+  if (drv) { db._drv = drv; dbBackend = 'firestore'; console.log('✅ Firebase Firestore CONNECTED:', cfg.projectId, authMode ? '(with Authentication)' : ''); }
+  else { db._drv = makeLocalDriver(); dbBackend = 'local'; console.warn('⚠️ Offline mode — gumagamit ng Local JSON. Dahilan:', dbWhy); }
+  setDbBadge();
+  applyAuthUI();
+  if (!authMode) { await ensureSeeded(); await loadAllData(); }   // sa Auth mode, magbabasa lang ng data pagkatapos mag-sign in
+}
+async function reconnectDatabase() {
+  dbReady = initDatabase();
+  await dbReady;
+  if (S && S.role) render();
+}
+
+/* ─── APP STATE ──────────────────────────────────── */
+const S = { role: null, displayName: null, initials: null, userId: null, page: 'dashboard' };
+
+/* ─── LOCAL / CACHED DATA (Synced with DB) ───────── */
+let systemSettings = {
+  examNotifications: true,
+  autoGrading: true,
+  antiCheating: true,
+  resultNotifications: true
+};
+
+let examLogs = [];
+let examEntries = [];
+let exams = [];
+
+let qbank = [];
+
+let results = [];
+
+let students = [];
+let editingStudentId = null;
+
+/* ─── EXAM CREATION ──────────────────────────────── */
+let editingExamId = null;
+let questionBlocks = [];
+let qbEditId = null;
+let _qid = 0;
+
+/* ─── EXAM TAKING ────────────────────────────────── */
+let activeExam = null;
+let studentAnswers = {};
+let timerInterval = null;
+let timeLeft = 0;
+
+/* ══════════════════════════════════════════════════ */
+/*  DATA LOADERS (FIRESTORE)                             */
+/* ══════════════════════════════════════════════════ */
+async function loadAllData() {
+  if (!db) return;
+
+  try {
+    // 1. Fetch Exams + Questions (choices/answers stored directly on questions row)
+    const { data: dbExams, error: errE } = await db
+      .from('exams')
+      .select(`
+        id, title, description, subject, duration, pass_score, attempts_count, status,
+        start_window, end_window, access_codes, used_codes, ip_whitelist,
+        questions (
+          id, question_text, type, correct_answer_index, correct_answer_text, order_index, choices
+        )
+      `)
+      .order('id', { ascending: false });
+
+    if (!errE && dbExams) {
+      exams = dbExams.map(e => ({
+        id: e.id,
+        title: e.title,
+        desc: e.description || '',
+        subject: e.subject,
+        duration: e.duration,
+        pass: e.pass_score,
+        attempts: e.attempts_count || 0,
+        status: e.status,
+        startWindow: e.start_window,
+        endWindow: e.end_window,
+        accessCodes: e.access_codes || [],
+        usedCodes: e.used_codes || [],
+        ipWhitelist: e.ip_whitelist || [],
+        questions: (e.questions || []).sort((a,b) => a.order_index - b.order_index).map(q => ({
+          id: q.id,
+          text: q.question_text,
+          type: q.type,
+          answer: q.type === 'sa' ? q.correct_answer_text : q.correct_answer_index,
+          choices: q.choices || []
+        }))
+      }));
+    } else if (errE) {
+      console.error('❌ Error fetching exams :', errE.message, errE);
+    }
+
+    // 2. Fetch Question Bank (choices stored directly on question_bank row)
+    const { data: dbQB, error: errQB } = await db
+      .from('question_bank')
+      .select(`
+        id, question_text, subject, type, difficulty, correct_answer_index, correct_answer_text, choices
+      `)
+      .order('id', { ascending: false });
+
+    if (!errQB && dbQB) {
+      qbank = dbQB.map(q => ({
+        id: q.id,
+        text: q.question_text,
+        subject: q.subject,
+        type: q.type,
+        diff: q.difficulty,
+        answer: q.type === 'sa' ? q.correct_answer_text : q.correct_answer_index,
+        choices: q.choices || []
+      }));
+    }
+
+    // 3. Fetch Students
+    const { data: dbStudents, error: errSt } = await db
+      .from('users')
+      .select('id, name, email, section, status')
+      .eq('role', 'student')
+      .order('name', { ascending: true });
+
+    if (!errSt && dbStudents) students = dbStudents;
+
+    // 4. Fetch Exam Results (answers stored directly on exam_results row)
+    const { data: dbResults, error: errR } = await db
+      .from('exam_results')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (!errR && dbResults) {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      results = dbResults.map(r => {
+        const d = new Date(r.submitted_at);
+        return {
+          id: r.id,
+          userId: r.user_id,
+          name: r.student_name,
+          exam: r.exam_title,
+          score: Math.round(Number(r.score_percentage)),
+          pass: Boolean(r.passed),
+          date: `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`,
+          answers: r.answers || []
+        };
+      });
+    }
+
+    // 5. Fetch Settings
+    const { data: dbSettings, error: errSet } = await db.from('system_settings').select('*');
+    if (!errSet && dbSettings) {
+      dbSettings.forEach(s => {
+        systemSettings[s.setting_key] = (s.setting_value === 'true' || s.setting_value === '1');
+      });
+    }
+
+    // 6. Fetch Logs
+    const { data: dbLogs, error: errL } = await db
+      .from('exam_logs')
+      .select('*')
+      .order('id', { ascending: false })
+      .limit(50);
+
+    if (!errL && dbLogs) {
+      examLogs = dbLogs.map(l => ({
+        action: l.action,
+        user: l.user_name,
+        date: new Date(l.created_at).toLocaleString()
+      }));
+    }
+
+    // 7. Exam entries (admin at teacher lang ang nakakakita)
+    if (S.role === 'admin' || S.role === 'teacher') {
+      const { data: dbEntries, error: errEn } = await db.from('exam_entries').select('*').order('entered_at', { ascending: false });
+      if (!errEn && dbEntries) examEntries = dbEntries;
+    }
+
+  } catch (err) {
+    console.error('Error fetching data:', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  ROUTING / PAGE VISIBILITY                         */
+/* ══════════════════════════════════════════════════ */
+function hideAll() {
+  ['landing-page','admin-login-page','student-login-page','teacher-login-page','app-page'].forEach(id => {
+    const el = $(id);
+    if (el) { el.style.display = 'none'; }
+  });
+  if (typeof setDbBadge === 'function') setDbBadge();
+}
+function showLanding() {
+  hideAll();
+  $('landing-page').style.display = 'flex';
+  $('landing-page').style.alignItems = 'center';
+  $('landing-page').style.justifyContent = 'center';
+}
+function showAdminLogin() {
+  hideAll();
+  const p = $('admin-login-page');
+  p.style.display = 'flex';
+  clearAdminErr();
+  setTimeout(() => { $('a-un').focus(); }, 100);
+}
+function showStudentLogin() {
+  hideAll();
+  const p = $('student-login-page');
+  p.style.display = 'flex';
+  $('s-err-name').style.display = 'none';
+  $('s-name').value = '';
+  if (typeof setStudentMode === 'function') setStudentMode('signin');
+  setTimeout(() => { $(authMode ? 's-email' : 's-name').focus(); }, 100);
+}
+function showTeacherLogin() {
+  hideAll();
+  const p = $('teacher-login-page');
+  p.style.display = 'flex';
+  clearTeacherErr();
+  $('t-un').value = '';
+  $('t-pw').value = '';
+  setTimeout(() => { $('t-un').focus(); }, 100);
+}
+
+function clearAdminErr() {
+  $('admin-err').style.display = 'none';
+  ['a-un','a-pw'].forEach(id => $(id).classList.remove('ei'));
+  ['a-err-un','a-err-pw'].forEach(id => $(id).style.display = 'none');
+}
+
+function clearTeacherErr() {
+  $('teacher-err').style.display = 'none';
+  ['t-un','t-pw'].forEach(id => $(id).classList.remove('ei'));
+  ['t-err-un','t-err-pw'].forEach(id => $(id).style.display = 'none');
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  AUTHENTICATION VIA FIRESTORE             */
+/* ══════════════════════════════════════════════════ */
+async function doAdminLogin() {
+  clearAdminErr();
+  const un = $('a-un').value.trim();
+  const pw = $('a-pw').value;
+  let ok = true;
+  if (!un) { $('a-err-un').style.display='block'; $('a-un').classList.add('ei'); ok=false; }
+  if (!pw) { $('a-err-pw').style.display='block'; $('a-pw').classList.add('ei'); ok=false; }
+  if (!ok) return;
+
+  await dbReady;
+  if (authMode) return staffAuthLogin('admin', un, pw);
+  $('admin-err-msg').textContent = 'Hindi maabot ang Firebase Authentication. Tingnan ang internet at firebase-config.js, tapos i-click ang Retry sa ibabang-kanan.';
+  $('admin-err').style.display = 'flex';
+}
+
+async function doTeacherLogin() {
+  clearTeacherErr();
+  const un = $('t-un').value.trim();
+  const pw = $('t-pw').value;
+  let ok = true;
+  if (!un) { $('t-err-un').style.display='block'; $('t-un').classList.add('ei'); ok=false; }
+  if (!pw) { $('t-err-pw').style.display='block'; $('t-pw').classList.add('ei'); ok=false; }
+  if (!ok) return;
+
+  await dbReady;
+  if (authMode) return staffAuthLogin('teacher', un, pw);
+  $('teacher-err-msg').textContent = 'Hindi maabot ang Firebase Authentication. Tingnan ang internet at firebase-config.js, tapos i-click ang Retry sa ibabang-kanan.';
+  $('teacher-err').style.display = 'flex';
+}
+
+async function doStudentLogin() {
+  $('s-err-name').textContent = 'Please enter your name.';
+  $('s-err-name').style.display = 'none';
+  $('s-name').classList.remove('ei');
+  const name = $('s-name').value.trim();
+  if (!name) {
+    $('s-err-name').style.display = 'block';
+    $('s-name').classList.add('ei');
+    return;
+  }
+
+  const parts = name.split(' ').filter(Boolean);
+  const initials = parts.length >= 2 ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+
+  await dbReady;
+  if (db) {
+    // Find or create student
+    let { data: student, error } = await db
+      .from('users')
+      .select('*')
+      .eq('role', 'student')
+      .eq('name', name)
+      .maybeSingle();
+
+    if (!student) {
+      const { data: newSt } = await db
+        .from('users')
+        .insert({ name, role: 'student', initials, status: 'Active' })
+        .select()
+        .single();
+      student = newSt;
+    }
+
+    if (student && student.status === 'Inactive') {
+      $('s-err-name').textContent = 'Your student account is inactive. Please contact your administrator.';
+      $('s-err-name').style.display = 'block';
+      return;
+    }
+
+    if (student) {
+      S.role = 'student';
+      S.displayName = student.name;
+      S.initials = student.initials || initials;
+      S.userId = student.id;
+      await addDbLog(`Student entered portal: ${name}`, name, student.id);
+      await loadAllData();
+      launchApp();
+      return;
+    }
+  }
+
+  // Fallback offline
+  S.role = 'student';
+  S.displayName = name;
+  S.initials = initials;
+  launchApp();
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  FIREBASE AUTHENTICATION (Email + Password)        */
+/* ══════════════════════════════════════════════════ */
+const normEmail = e => String(e || '').trim().toLowerCase();
+const adminEmails = () => (window.ADMIN_EMAILS || []).map(normEmail);
+const teacherEmails = () => (window.TEACHER_EMAILS || []).map(normEmail);
+const isStaffEmail = e => adminEmails().includes(e) || teacherEmails().includes(e);
+function initialsOf(name) {
+  const parts = String(name || '').split(' ').filter(Boolean);
+  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : String(name || '?').slice(0, 2).toUpperCase();
+}
+
+function authErrMsg(e) {
+  const c = (e && e.code) || '';
+  if (c === 'app/email-not-verified') {
+    return 'Hindi pa verified ang email mo. ' + (e.sent
+      ? 'Nagpadala kami ng verification link sa ' + e.email + '. I-click ito (tingnan din ang Spam), tapos mag-sign in ulit.'
+      : 'Tingnan ang inbox o Spam para sa verification link, tapos mag-sign in ulit.');
+  }
+  const map = {
+    'auth/invalid-credential': 'Mali ang email o password.',
+    'auth/invalid-login-credentials': 'Mali ang email o password.',
+    'auth/wrong-password': 'Mali ang email o password.',
+    'auth/user-not-found': 'Mali ang email o password.',
+    'auth/invalid-email': 'Hindi valid ang email.',
+    'auth/missing-password': 'Ilagay ang password.',
+    'auth/email-already-in-use': 'May account na ang email na ito. Mag-sign in na lang, o gamitin ang Forgot password.',
+    'auth/weak-password': 'Masyadong maikli ang password (hindi bababa sa 6 na character).',
+    'auth/too-many-requests': 'Masyadong maraming subok. Maghintay sandali at subukan ulit.',
+    'auth/network-request-failed': 'Walang koneksyon sa internet o sa Firebase.',
+    'auth/user-disabled': 'Naka-disable ang account na ito.',
+    'auth/operation-not-allowed': 'Hindi pa naka-enable ang Email/Password: Firebase Console → Authentication → Sign-in method → Email/Password → Enable.',
+    'auth/configuration-not-found': 'Hindi pa na-set up ang Authentication: Firebase Console → Authentication → i-click ang "Get started".'
+  };
+  return map[c] || friendlyDbError(e);
+}
+
+async function authSignInVerified(email, pw) {
+  const cred = await fbAuth.signInWithEmailAndPassword(email, pw);
+  const u = cred.user;
+  if (!u.emailVerified) {
+    let sent = true;
+    try { await u.sendEmailVerification(); } catch (e) { sent = false; }
+    await fbAuth.signOut();
+    const err = new Error('Email not verified');
+    err.code = 'app/email-not-verified'; err.sent = sent; err.email = email;
+    throw err;
+  }
+  return u;
+}
+
+// Isang beses lang: lagyan ng sample data ang Firestore kung walang laman (kailangan naka-sign in)
+async function ensureSeeded() {
+  // Default system settings lang ang nilalagay (kung wala pa). Walang sample students/exams/results, at walang binubura.
+  try {
+    if (db._drv.name !== 'firestore') return;
+    const have = await db._drv.list('system_settings', {});
+    if (have.length) return;
+    for (const s of clone(DB_SEED).system_settings) await db._drv.set('system_settings', s);
+    console.log('🌱 Nalagay ang default system settings');
+  } catch (e) { console.error('Seed check failed:', e); }
+}
+
+async function findProfile(email) {
+  const { data } = await db.from('users').select('*').eq('email', email).maybeSingle();
+  return data || null;
+}
+async function createProfile(user, role) {
+  const email = normEmail(user.email);
+  const name = user.displayName || email.split('@')[0];
+  const { data, error } = await db.from('users')
+    .insert({ name, email, role, initials: initialsOf(name), status: 'Active', uid: user.uid })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Pagtanggal ng lumang plain-text na password sa Firestore (galing sa dating login system)
+async function scrubLegacyPasswords() {
+  try {
+    const { data } = await db.from('users').select('*');
+    for (const u of (data || [])) {
+      if (u.password) await db.from('users').update({ password: null }).eq('id', u.id);
+    }
+  } catch (e) { console.warn('Hindi na-scrub ang lumang password:', e); }
+}
+
+async function staffAuthLogin(role, emailRaw, pw) {
+  const isA = role === 'admin';
+  const errBox = $(isA ? 'admin-err' : 'teacher-err'), errMsg = $(isA ? 'admin-err-msg' : 'teacher-err-msg');
+  const showErr = m => { errMsg.textContent = m; errBox.style.display = 'flex'; };
+  const email = normEmail(emailRaw);
+  const allow = isA ? adminEmails() : teacherEmails();
+  try {
+    const user = await authSignInVerified(email, pw);
+    await ensureSeeded();
+    let prof = await findProfile(email);
+    if (!prof) {
+      if (!allow.includes(email)) {
+        await fbAuth.signOut();
+        showErr('Walang ' + role + ' access ang account na ito. Ilagay ang email sa ' + (isA ? 'ADMIN_EMAILS' : 'TEACHER_EMAILS') + ' sa firebase-config.js.');
+        return;
+      }
+      prof = await createProfile(user, role);
+    } else if (allow.includes(email) && prof.role !== role) {
+      await db.from('users').update({ role }).eq('id', prof.id);
+      prof.role = role;
+    }
+    if (prof.role !== role) {
+      await fbAuth.signOut();
+      showErr('Hindi ' + role + ' ang account na ito. Gamitin ang tamang login.');
+      return;
+    }
+    if (prof.status === 'Inactive') {
+      await fbAuth.signOut();
+      showErr('Inactive ang account na ito. Makipag-ugnayan sa administrator.');
+      return;
+    }
+    if (!prof.uid) { await db.from('users').update({ uid: user.uid }).eq('id', prof.id); }
+    S.role = role; S.displayName = prof.name; S.initials = prof.initials || initialsOf(prof.name); S.userId = prof.id;
+    if (isA) await scrubLegacyPasswords();
+    await addDbLog((isA ? 'Admin' : 'Teacher') + ' logged in: ' + prof.name, prof.name, prof.id);
+    await loadAllData();
+    launchApp();
+  } catch (e) {
+    showErr(authErrMsg(e));
+  }
+}
+
+async function staffRegister(role) {
+  const isA = role === 'admin';
+  const email = normEmail($(isA ? 'a-un' : 't-un').value), pw = $(isA ? 'a-pw' : 't-pw').value;
+  const allow = isA ? adminEmails() : teacherEmails();
+  if (!email || !pw) { alert('Ilagay muna ang email at password na gagamitin mo, tapos i-click ang Create account.'); return; }
+  if (!allow.includes(email)) { alert('Hindi nakalista ang email na ito bilang ' + role + ' sa firebase-config.js (' + (isA ? 'ADMIN_EMAILS' : 'TEACHER_EMAILS') + ').'); return; }
+  if (pw.length < 6) { alert('Ang password ay dapat hindi bababa sa 6 na character.'); return; }
+  try {
+    const cred = await fbAuth.createUserWithEmailAndPassword(email, pw);
+    let sent = true;
+    try { await cred.user.sendEmailVerification(); } catch (e) { sent = false; }
+    await fbAuth.signOut();
+    alert('✅ Nagawa na ang account. ' + (sent ? 'Nagpadala kami ng verification link sa ' + email + '. I-click ito (tingnan din ang Spam), tapos mag-sign in dito.' : 'Hindi naipadala ang verification email; subukang mag-sign in para maipadala ulit.'));
+  } catch (e) { alert(authErrMsg(e)); }
+}
+
+async function forgotPassword(inputId) {
+  const email = normEmail($(inputId).value);
+  if (!email) { alert('I-type muna ang email mo sa Email field, tapos i-click ulit ang Forgot password.'); return; }
+  try {
+    await fbAuth.sendPasswordResetEmail(email);
+    alert('Nagpadala kami ng password reset link sa ' + email + ' (kung may account ito). Tingnan ang inbox o Spam.');
+  } catch (e) { alert(authErrMsg(e)); }
+}
+
+/* ── Student: sign in / register ── */
+let studentMode = 'signin';
+function setStudentMode(m) {
+  studentMode = m;
+  const reg = m === 'register';
+  $('s-reg-fields').style.display = reg ? 'block' : 'none';
+  $('s-auth-btn').innerHTML = reg ? '<i class="ti ti-user-plus"></i> Create Account' : '<i class="ti ti-login"></i> Sign In';
+  $('s-toggle').textContent = reg ? 'May account na? Mag-sign in' : 'Wala pang account? Mag-register';
+  $('s-pw').autocomplete = reg ? 'new-password' : 'current-password';
+  $('s-auth-err').style.display = 'none';
+}
+function toggleStudentMode() { setStudentMode(studentMode === 'signin' ? 'register' : 'signin'); }
+function stuErr(msg) { $('s-auth-err-msg').textContent = msg; $('s-auth-err').style.display = 'flex'; }
+
+async function studentAuthSubmit() {
+  $('s-auth-err').style.display = 'none';
+  await dbReady;
+  const email = normEmail($('s-email').value), pw = $('s-pw').value;
+  if (!email || !pw) { stuErr('Ilagay ang email at password.'); return; }
+  if (isStaffEmail(email)) { stuErr('Para sa admin/teacher ang email na ito. Gamitin ang Admin o Teacher login.'); return; }
+
+  if (studentMode === 'register') {
+    const name = $('s-reg-name').value.trim();
+    if (!name) { stuErr('Ilagay ang buong pangalan mo.'); return; }
+    if (pw.length < 6) { stuErr('Ang password ay dapat hindi bababa sa 6 na character.'); return; }
+    try {
+      const cred = await fbAuth.createUserWithEmailAndPassword(email, pw);
+      await cred.user.updateProfile({ displayName: name });
+      let sent = true;
+      try { await cred.user.sendEmailVerification(); } catch (e) { sent = false; }
+      await fbAuth.signOut();
+      setStudentMode('signin'); $('s-pw').value = '';
+      alert('✅ Nagawa na ang account mo. ' + (sent ? 'Nagpadala kami ng verification link sa ' + email + '. I-click ito (tingnan din ang Spam), tapos mag-sign in dito.' : 'Mag-sign in para maipadala ulit ang verification email.'));
+    } catch (e) { stuErr(authErrMsg(e)); }
+    return;
+  }
+
+  try {
+    const user = await authSignInVerified(email, pw);
+    await ensureSeeded();
+    let prof = await findProfile(email);
+    if (!prof) prof = await createProfile(user, 'student');
+    if (prof.role !== 'student') {
+      await fbAuth.signOut();
+      stuErr('Hindi student account ito. Gamitin ang Admin o Teacher login.');
+      return;
+    }
+    if (prof.status === 'Inactive') {
+      await fbAuth.signOut();
+      stuErr('Inactive ang student account mo. Makipag-ugnayan sa administrator.');
+      return;
+    }
+    if (!prof.uid) { await db.from('users').update({ uid: user.uid }).eq('id', prof.id); }
+    S.role = 'student'; S.displayName = prof.name; S.initials = prof.initials || initialsOf(prof.name); S.userId = prof.id;
+    await addDbLog('Student signed in: ' + prof.name, prof.name, prof.id);
+    await loadAllData();
+    launchApp();
+  } catch (e) { stuErr(authErrMsg(e)); }
+}
+
+// Palitan ang itsura ng login pages depende kung may Authentication o wala
+function applyAuthUI() {
+  const on = authMode;
+  const setT = (id, t) => { const el = $(id); if (el) el.textContent = t; };
+  setT('a-un-label', on ? 'Email' : 'Username'); setT('t-un-label', on ? 'Email' : 'Username');
+  setT('a-err-un', on ? 'Email is required.' : 'Username is required.'); setT('t-err-un', on ? 'Email is required.' : 'Username is required.');
+  ['a-un', 't-un'].forEach(id => { const el = $(id); if (el) { el.type = on ? 'email' : 'text'; el.placeholder = on ? 'Enter your email' : 'Enter your username'; el.autocomplete = on ? 'email' : 'username'; } });
+  ['a-auth-links', 't-auth-links'].forEach(id => { const el = $(id); if (el) el.style.display = on ? 'flex' : 'none'; });
+  const lg = $('s-legacy-box'), au = $('s-auth-box');
+  if (lg) lg.style.display = on ? 'none' : 'block';
+  if (au) au.style.display = on ? 'block' : 'none';
+  const sub = $('s-sub');
+  if (sub) { if (!sub.dataset.orig) sub.dataset.orig = sub.textContent; sub.textContent = on ? 'Mag-sign in gamit ang email at password mo. Kung wala ka pang account, mag-register — padadalhan ka ng verification email.' : sub.dataset.orig; }
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  LAUNCH APP                                        */
+/* ══════════════════════════════════════════════════ */
+function launchApp() {
+  hideAll();
+  $('app-page').style.display = 'block';
+
+  const isA = S.role === 'admin';
+  const isT = S.role === 'teacher';
+  const isS = S.role === 'student';
+
+  $('sb-av').className = 'sb-av ' + (isA ? 'av-a' : isT ? 'av-t' : 'av-s');
+  $('sb-av').textContent = S.initials;
+  $('sb-name').textContent = S.displayName;
+  $('sb-role').textContent = isA ? 'Administrator' : isT ? 'Teacher' : 'Student';
+
+  $('role-pill').className = 'role-pill ' + (isA ? 'pill-a' : isT ? 'pill-t' : 'pill-s');
+  $('pill-dot').className = 'pill-dot ' + (isA ? 'dot-a' : isT ? 'dot-t' : 'dot-s');
+  $('pill-txt').textContent = isA ? 'Administrator' : isT ? 'Teacher' : 'Student';
+
+  ['nav-dashboard','nav-exams','nav-qbank','nav-take','nav-results','nav-students','nav-settings','nav-logs']
+    .forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+
+  $('tag-exams').style.display = 'none';
+  $('tag-qbank').style.display = 'none';
+
+  if (isS) {
+    $('nav-take').style.display = 'flex';
+    $('nav-results').style.display = 'flex';
+    $('results-nav-label').textContent = 'Results';
+    nav('take');
+    return;
+  }
+
+  if (isT) {
+    $('nav-dashboard').style.display = 'flex';
+    $('nav-exams').style.display = 'flex';
+    $('nav-qbank').style.display = 'flex';
+    $('nav-results').style.display = 'flex';
+    $('results-nav-label').textContent = 'Class Performance';
+    nav('dashboard');
+    return;
+  }
+
+  ['nav-dashboard','nav-exams','nav-qbank','nav-take','nav-results','nav-students','nav-settings','nav-logs']
+    .forEach(id => { const el=$(id); if(el) el.style.display='flex'; });
+  $('tag-exams').style.display = 'inline-flex';
+  $('tag-qbank').style.display = 'inline-flex';
+  $('results-nav-label').textContent = 'Results & Reports';
+  nav('dashboard');
+}
+
+function doLogout() {
+  if (S.displayName) addLog('Logged out', S.displayName);
+  if (authMode && fbAuth) fbAuth.signOut().catch(() => {});
+  S.role = null; S.displayName = null; S.initials = null; S.userId = null;
+  showLanding();
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  NAVIGATION                                        */
+/* ══════════════════════════════════════════════════ */
+function nav(page) {
+  const allowed = {
+    student: ['take','results'],
+    teacher: ['dashboard','exams','qbank','results'],
+    admin: ['dashboard','exams','qbank','take','results','students','settings','logs']
+  };
+
+  if (S.role && allowed[S.role] && !allowed[S.role].includes(page)) {
+    page = S.role === 'student' ? 'take' : 'dashboard';
+  }
+
+  S.page = page;
+
+  document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('active'));
+  const el = $('nav-' + page);
+  if (el) el.classList.add('active');
+
+  render();
+}
+function showNotice(cls, html) {
+  const n = $('notice'); n.className='notice '+cls; n.style.display='flex'; n.innerHTML=html;
+}
+function hideNotice() { $('notice').style.display='none'; }
+
+/* ══════════════════════════════════════════════════ */
+/*  RENDER                                            */
+/* ══════════════════════════════════════════════════ */
+function render() {
+  const isA = S.role === 'admin', isT = S.role === 'teacher', page = S.page, body = $('main-body');
+  const titles = { dashboard:'Dashboard', exams:'Exams & Quizzes', qbank:'Question Bank', take:'Take Exam', results:(isT?'Class Performance':'Results'), students:'Students', settings:'System Settings', logs:'Exam Logs' };
+  $('page-title').textContent = titles[page] || page;
+  hideNotice();
+
+  if (page==='dashboard') { renderDashboard(isA, body); return; }
+  if (page==='exams')     { renderExams(isA, body); return; }
+  if (page==='qbank')     { renderQBank(isA, body); return; }
+  if (page==='take')      { renderTake(isA, body); return; }
+  if (page==='results')   { renderResults(body); return; }
+  if (page==='students')  { renderStudents(body); return; }
+  if (page==='settings')  { renderSettings(body); return; }
+  if (page==='logs')      { renderLogs(body); return; }
+}
+
+/* ─── DASHBOARD ──────────────────────────────────── */
+function renderDashboard(isA, body) {
+  const isT = S.role === 'teacher';
+  const totalQ = exams.reduce((a,e)=>a+(e.questions?e.questions.length:0),0);
+
+  if (isT) {
+    const classResults = results;
+    const avg = classResults.length ? Math.round(classResults.reduce((a,r)=>a+r.score,0)/classResults.length) : 0;
+    const passRate = classResults.length ? Math.round(classResults.filter(r=>r.pass).length/classResults.length*100) : 0;
+
+    body.innerHTML = `
+    <div class="dash-grid">
+      <div class="metric"><div class="metric-lbl">My Exams</div><div class="metric-val">${exams.length}</div><div class="metric-sub">Available exam sets</div></div>
+      <div class="metric"><div class="metric-lbl">Questions</div><div class="metric-val">${totalQ}</div><div class="metric-sub">Across your exams</div></div>
+      <div class="metric"><div class="metric-lbl">Submissions</div><div class="metric-val">${classResults.length}</div><div class="metric-sub">Recorded attempts</div></div>
+      <div class="metric"><div class="metric-lbl">Average Score</div><div class="metric-val">${classResults.length?avg+'%':'—'}</div><div class="metric-sub">Class performance</div></div>
+      <div class="metric"><div class="metric-lbl">Pass Rate</div><div class="metric-val">${classResults.length?passRate+'%':'—'}</div><div class="metric-sub">Overall</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">Class Performance</div>
+        <button class="btn btn-primary btn-sm" onclick="nav('results')">View All Results</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+        ${classResults.slice(0,8).map(r=>`<tr>
+          <td><div class="td-name">${esc(r.name)}</div></td><td>${esc(r.exam)}</td><td>${r.score}%</td>
+          <td><span class="badge ${r.pass?'bp':'bf'}">${r.pass?'Passed':'Failed'}</span></td><td>${r.date}</td>
+        </tr>`).join('')}
+        ${!classResults.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:28px">No class results yet.</td></tr>':''}
+        </tbody>
+      </table></div>
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = `
+  <div class="dash-grid">
+    <div class="metric"><div class="metric-lbl">Total Exams</div><div class="metric-val">${exams.length}</div><div class="metric-sub">Across all subjects</div></div>
+    <div class="metric"><div class="metric-lbl">Questions</div><div class="metric-val">${totalQ}</div><div class="metric-sub">In bank &amp; exams</div></div>
+    <div class="metric"><div class="metric-lbl">Students</div><div class="metric-val">${students.length}</div><div class="metric-sub">Enrolled</div></div>
+    <div class="metric"><div class="metric-lbl">Results</div><div class="metric-val">${results.length}</div><div class="metric-sub">Recorded</div></div>
+    <div class="metric"><div class="metric-lbl">Pass Rate</div><div class="metric-val">${results.length?Math.round(results.filter(r=>r.pass).length/results.length*100)+'%':'—'}</div><div class="metric-sub">Overall</div></div>
+  </div>
+  ${examTableHTML()}`;
+}
+
+/* ─── EXAMS & QUIZZES ─────────────────────────────── */
+function renderExams(isA, body) {
+  const isT = S.role === 'teacher';
+  if (!isA && !isT) {
+    showNotice('n-danger','<i class="ti ti-lock" style="font-size:15px"></i><span>This section is restricted to <strong>Teachers and Administrators</strong> only.</span>');
+    body.innerHTML = accessDenied('ti-lock','Management Access Required','Exam creation and management is only available to teachers and administrators.');
+    return;
+  }
+  showNotice('n-admin','<i class="ti ti-shield-check" style="font-size:15px"></i><span>'+ (isT ? 'Teacher access — create, edit and manage your exams here.' : 'Admin access — create, edit and delete exams here.') +'</span>');
+  body.innerHTML = examTableHTML();
+}
+
+function examTableHTML() {
+  const sb={Mathematics:'bm',History:'bh',Science:'bs',Quanti:'bq',English:'bm',Other:'bq'};
+  return `<div class="card">
+    <div class="card-hdr">
+      <div class="card-title">${S.role==='teacher' ? 'My Exams &amp; Quizzes' : 'All Exams &amp; Quizzes'}</div>
+      <button class="btn btn-primary" onclick="openCreateExam()"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Create Exam</button>
+    </div>
+    <div class="table-wrap"><table>
+      <colgroup><col style="width:240px"><col style="width:110px"><col style="width:90px"><col style="width:90px"><col style="width:70px"><col style="width:80px"><col style="width:110px"></colgroup>
+      <thead><tr><th>Name</th><th>Subject</th><th>Questions</th><th>Duration</th><th>Pass</th><th>Attempts</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${exams.map(e=>`<tr>
+        <td><div class="td-name">${esc(e.title)}</div><div class="td-sub">${esc(e.desc)||'—'}${examSecurityBadgesInline(e)}</div></td>
+        <td><span class="badge ${sb[e.subject]||'bq'}">${esc(e.subject)}</span></td>
+        <td>${e.questions?e.questions.length:0} Qs</td><td>${e.duration} min</td><td>${e.pass}%</td><td>${e.attempts||0}</td>
+        <td style="display:flex;gap:6px;padding:10px 16px">
+          <button class="btn btn-icon btn-sm" onclick="openEditExam(${e.id})" title="Edit"><i class="ti ti-edit" style="font-size:13px"></i></button>
+          <button class="btn btn-icon btn-sm btn-red" onclick="confirmDelete('exam',${e.id},'${escQ(e.title)}')" title="Delete"><i class="ti ti-trash" style="font-size:13px"></i></button>
+        </td>
+      </tr>`).join('')}
+      ${!exams.length?'<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:28px">No exams yet. Click "Create Exam" to get started.</td></tr>':''}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function examSecurityBadgesInline(e){
+  const bits=[];
+  if(e.accessCode || (e.accessCodes&&e.accessCodes.length)) bits.push('<i class="ti ti-key" title="Access code required"></i>');
+  if(e.startWindow||e.endWindow) bits.push('<i class="ti ti-calendar-time" title="Time-window restricted"></i>');
+  if(e.ipWhitelist&&e.ipWhitelist.length) bits.push('<i class="ti ti-map-pin" title="IP restricted"></i>');
+  if(!bits.length) return '';
+  return ' &nbsp;'+bits.join(' ');
+}
+
+/* ─── QUESTION BANK ──────────────────────────────── */
+function renderQBank(isA, body) {
+  const isT = S.role === 'teacher';
+  if (!isA && !isT) {
+    showNotice('n-danger','<i class="ti ti-lock" style="font-size:15px"></i><span>This section is restricted to <strong>Teachers and Administrators</strong> only.</span>');
+    body.innerHTML = accessDenied('ti-lock','Management Access Required','The Question Bank is only accessible to teachers and administrators.');
+    return;
+  }
+  showNotice('n-admin','<i class="ti ti-shield-check" style="font-size:15px"></i><span>'+ (isT ? 'Teacher access — create, store and organize questions here.' : 'Admin access — manage and organize all questions here.') +'</span>');
+  const sb={Mathematics:'bm',History:'bh',Science:'bs',Quanti:'bq',English:'bm',Other:'bq'};
+  const tl={mc:'Multiple Choice',tf:'True / False',sa:'Short Answer'};
+  body.innerHTML=`<div class="card">
+    <div class="card-hdr">
+      <div class="card-title">${S.role==='teacher' ? 'My Question Bank' : 'Question Bank'}</div>
+      <button class="btn btn-primary" onclick="openAddQB()"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Add Question</button>
+    </div>
+    <div class="table-wrap"><table>
+      <colgroup><col style="width:300px"><col style="width:115px"><col style="width:140px"><col style="width:90px"><col style="width:110px"></colgroup>
+      <thead><tr><th>Name</th><th>Subject</th><th>Type</th><th>Difficulty</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${qbank.map(q=>`<tr>
+        <td><div class="td-name">${esc(q.text)}</div></td>
+        <td><span class="badge ${sb[q.subject]||'bq'}">${esc(q.subject)}</span></td>
+        <td>${tl[q.type]||q.type}</td><td>${esc(q.diff)}</td>
+        <td style="display:flex;gap:6px;padding:10px 16px">
+          <button class="btn btn-icon btn-sm" onclick="openEditQB(${q.id})" title="Edit"><i class="ti ti-edit" style="font-size:13px"></i></button>
+          <button class="btn btn-icon btn-sm btn-red" onclick="confirmDelete('qb',${q.id},'question')" title="Delete"><i class="ti ti-trash" style="font-size:13px"></i></button>
+        </td>
+      </tr>`).join('')}
+      ${!qbank.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:28px">No questions yet. Click "Add Question" to get started.</td></tr>':''}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ─── TAKE EXAM ──────────────────────────────────── */
+function renderTake(isA, body) {
+  const available = exams.filter(e=>e.questions&&e.questions.length>0&&(!e.status||e.status==='Active'));
+  if (isA) {
+    showNotice('n-admin','<i class="ti ti-shield-check" style="font-size:15px"></i><span>You created these exams — you can take them here as a preview.</span>');
+    body.innerHTML = `
+    <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:13px;color:#9ca3af">${available.length} exam${available.length!==1?'s':''} available</div>
+      <span class="atag atag-a" style="font-size:12px;padding:4px 12px"><i class="ti ti-shield-check" style="font-size:11px"></i>&nbsp;Admin Preview</span>
+    </div>
+    ${studentExamCards(available)}`;
+    return;
+  }
+  showNotice('n-student','<i class="ti ti-user-graduate" style="font-size:15px"></i><span>Welcome, <strong>'+esc(S.displayName)+'</strong> — select an exam below to begin.</span>');
+  body.innerHTML = `
+  <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:13px;color:#9ca3af">${available.length} exam${available.length!==1?'s':''} available</div>
+    <span class="atag atag-s" style="font-size:12px;padding:4px 12px"><i class="ti ti-user" style="font-size:11px"></i>&nbsp;Student Portal</span>
+  </div>
+  ${studentExamCards(available)}`;
+}
+
+function studentExamCards(list) {
+  if (!list.length) return '<div style="background:#fff;border-radius:10px;border:.5px solid #e2e5ee;padding:40px;text-align:center;color:#9ca3af;font-size:13px">No exams available at this time.</div>';
+  const sb={Mathematics:'bm',History:'bh',Science:'bs',Quanti:'bq',English:'bm',Other:'bq'};
+  return `<div class="exam-cards-list">${list.map(e=>`
+  <div class="exam-card-item">
+    <div class="ec-top">
+      <div><div class="ec-title">${esc(e.title)}</div><div class="ec-desc">${esc(e.desc)}</div></div>
+      <span class="badge ${sb[e.subject]||'bq'}">${esc(e.subject)}</span>
+    </div>
+    <div class="ec-stats">
+      <div class="ec-stat"><i class="ti ti-help-circle"></i>${e.questions?e.questions.length:0} questions</div>
+      <div class="ec-stat"><i class="ti ti-clock"></i>${e.duration} min</div>
+      <div class="ec-stat"><i class="ti ti-target"></i>Pass: ${e.pass}%</div>
+      ${(e.accessCode||(e.accessCodes&&e.accessCodes.length))?'<div class="ec-stat"><i class="ti ti-key"></i>Code required</div>':''}
+      ${(e.startWindow||e.endWindow)?'<div class="ec-stat"><i class="ti ti-calendar-time"></i>Time-restricted</div>':''}
+      <div style="margin-left:auto"><button class="start-btn" onclick="startExam(${e.id})">Start Exam →</button></div>
+    </div>
+  </div>`).join('')}
+  </div>`;
+}
+
+/* ─── RESULTS ────────────────────────────────────── */
+function renderResults(body) {
+  renderResultsMain(body);
+  if (S.role === 'admin' || S.role === 'teacher') body.insertAdjacentHTML('beforeend', entriesCardHTML());
+}
+function entriesCardHTML() {
+  const rows = examEntries.map(en => `<tr>
+    <td><div class="td-name">${esc(en.student_name)}</div></td>
+    <td>${esc(en.exam_title)}</td>
+    <td><span class="badge ${en.status === 'Submitted' ? 'bp' : 'bpend'}">${esc(en.status || 'In progress')}</span></td>
+    <td>${en.blocked_attempts ? `<span class="badge bf">${en.blocked_attempts} blocked</span>` : '—'}</td>
+    <td>${new Date(en.entered_at).toLocaleString()}</td>
+    <td><button class="btn btn-sm" onclick="resetEntry('${escQ(String(en.id))}','${escQ(en.student_name)}')">Reset</button></td>
+  </tr>`).join('');
+  return `<div class="card" style="margin-top:16px">
+    <div class="card-hdr"><div class="card-title">Exam Entries &amp; Blocked Attempts</div></div>
+    <div style="padding:10px 20px;font-size:12px;color:#6b7280">Isang beses lang makakapasok ang bawat student sa bawat exam. Ang "blocked" ay bilang ng pagtatangkang pumasok ulit sa account na iyon. Kung kailangang pumasok ulit ng totoong student (halimbawa, nag-crash ang browser), i-click ang Reset.</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Exam</th><th>Status</th><th>Blocked</th><th>Entered</th><th>Action</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:28px">No entries yet.</td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+}
+async function resetEntry(id, name) {
+  if (!confirm('I-reset ang pasok ni ' + name + '? Makakapasok siya ulit sa exam na ito.')) return;
+  const { error } = await db.from('exam_entries').delete().eq('id', id);
+  if (error) { alert('Hindi na-reset: ' + error.message); return; }
+  await addDbLog('Reset exam entry: ' + name, S.displayName, S.userId);
+  await loadAllData();
+  render();
+}
+function renderResultsMain(body) {
+  const isA = S.role === 'admin';
+  const isT = S.role === 'teacher';
+  const visibleResults = (isA || isT) ? results : results.filter(r => (r.userId != null && S.userId != null) ? String(r.userId) === String(S.userId) : r.name === S.displayName);
+
+  if (isT) {
+    const avg = visibleResults.length ? Math.round(visibleResults.reduce((a,r)=>a+r.score,0)/visibleResults.length) : 0;
+    const passRate = visibleResults.length ? Math.round(visibleResults.filter(r=>r.pass).length/visibleResults.length*100) : 0;
+    body.innerHTML = `
+    <div class="dash-grid">
+      <div class="metric"><div class="metric-lbl">Submissions</div><div class="metric-val">${visibleResults.length}</div><div class="metric-sub">Class attempts</div></div>
+      <div class="metric"><div class="metric-lbl">Average Score</div><div class="metric-val">${visibleResults.length?avg+'%':'—'}</div><div class="metric-sub">Class average</div></div>
+      <div class="metric"><div class="metric-lbl">Pass Rate</div><div class="metric-val">${visibleResults.length?passRate+'%':'—'}</div><div class="metric-sub">Overall</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">Class Performance &amp; Results</div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+        ${visibleResults.map(r=>`<tr><td><div class="td-name">${esc(r.name)}</div></td><td>${esc(r.exam)}</td><td>${r.score}%</td><td><span class="badge ${r.pass?'bp':'bf'}">${r.pass?'Passed':'Failed'}</span></td><td>${r.date}</td></tr>`).join('')}
+        ${!visibleResults.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:28px">No class results yet.</td></tr>':''}
+        </tbody>
+      </table></div>
+    </div>`;
+    return;
+  }
+
+  body.innerHTML=`<div class="card">
+    <div class="card-hdr"><div class="card-title">${isA ? 'Exam Results &amp; Reports' : 'My Exam Results'}</div></div>
+    <div class="table-wrap"><table>
+      <colgroup>${isA ? '<col style="width:160px">' : ''}<col style="width:200px"><col style="width:80px"><col style="width:90px"><col style="width:130px"></colgroup>
+      <thead><tr>${isA ? '<th>Name</th>' : ''}<th>Exam</th><th>Score</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+      ${visibleResults.map(r=>`<tr>${isA ? `<td><div class="td-name">${esc(r.name)}</div></td>` : ''}<td>${esc(r.exam)}</td><td>${r.score}%</td><td><span class="badge ${r.pass?'bp':'bf'}">${r.pass?'Passed':'Failed'}</span></td><td>${r.date}</td></tr>`).join('')}
+      ${!visibleResults.length ? `<tr><td colspan="${isA ? 5 : 4}" style="text-align:center;color:#9ca3af;padding:28px">${isA ? 'No results yet.' : 'You have no exam results yet.'}</td></tr>` : ''}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ─── STUDENTS ───────────────────────────────────── */
+function renderStudents(body) {
+  const isA = S.role === 'admin';
+  const stBadge = { Active:'ba', Inactive:'bf', Pending:'bpend' };
+  body.innerHTML=`<div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Students <span style="font-size:12px;color:#9ca3af;font-weight:400;margin-left:6px">${students.length} enrolled</span></div>
+      ${isA ? '<button class="btn btn-primary" onclick="openAddStudent()"><i class="ti ti-plus" style="font-size:13px;margin-right:4px"></i>Add Student</button>' : ''}
+    </div>
+    <div class="table-wrap"><table>
+      <colgroup><col style="width:170px"><col style="width:190px"><col style="width:110px"><col style="width:90px">${isA?'<col style="width:110px">':''}</colgroup>
+      <thead><tr><th>Name</th><th>Email</th><th>Section</th><th>Status</th>${isA?'<th>Actions</th>':''}</tr></thead>
+      <tbody>
+      ${students.map(s=>`<tr>
+        <td><div class="td-name">${esc(s.name)}</div></td>
+        <td style="color:#6b7280">${esc(s.email)||'—'}</td>
+        <td>${esc(s.section)||'—'}</td>
+        <td><span class="badge ${stBadge[s.status]||'bpend'}">${s.status}</span></td>
+        ${isA?`<td style="display:flex;gap:6px;padding:10px 16px">
+          <button class="btn btn-icon btn-sm" onclick="openEditStudent(${s.id})" title="Edit"><i class="ti ti-edit" style="font-size:13px"></i></button>
+          <button class="btn btn-icon btn-sm btn-red" onclick="confirmDelete('student',${s.id},'${escQ(s.name)}')" title="Delete"><i class="ti ti-trash" style="font-size:13px"></i></button>
+        </td>`:''}
+      </tr>`).join('')}
+      ${!students.length?`<tr><td colspan="${isA?5:4}" style="text-align:center;color:#9ca3af;padding:28px">No students enrolled yet. Click "Add Student" to get started.</td></tr>`:''}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function openAddStudent() {
+  editingStudentId = null;
+  $('modal-student-title').textContent = 'Add Student';
+  $('st-name').value = '';
+  $('st-email').value = '';
+  $('st-section').value = '';
+  $('st-status').value = 'Active';
+  openModal('modal-student');
+}
+function openEditStudent(id) {
+  const s = students.find(x=>x.id===id); if(!s) return;
+  editingStudentId = id;
+  $('modal-student-title').textContent = 'Edit Student';
+  $('st-name').value = s.name;
+  $('st-email').value = s.email||'';
+  $('st-section').value = s.section||'';
+  $('st-status').value = s.status;
+  openModal('modal-student');
+}
+
+async function saveStudent() {
+  const name = $('st-name').value.trim();
+  const email = $('st-email').value.trim().toLowerCase();
+  const section = $('st-section').value.trim();
+  const status = $('st-status').value;
+
+  if (!name || !email) {
+    alert('Please fill in Name and Email.');
+    return;
+  }
+
+  const parts = name.split(' ').filter(Boolean);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+
+  try {
+    if (editingStudentId) {
+      const { data, error } = await db
+        .from('users')
+        .update({
+          name,
+          email,
+          section,
+          status,
+          initials
+        })
+        .eq('id', editingStudentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Student updated:', data);
+      await addDbLog(`Updated student: ${name}`, S.displayName);
+    } else {
+      const { data, error } = await db
+        .from('users')
+        .insert({
+          name,
+          email,
+          section,
+          status,
+          role: 'student',
+          initials
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Student inserted:', data);
+      await addDbLog(`Enrolled student: ${name}`, S.displayName);
+    }
+
+    await loadAllData();
+    closeModal('modal-student');
+    render();
+
+  } catch (error) {
+    console.error('❌ Student save error:', error);
+    alert('DATABASE ERROR:\n' + (error.message || error));
+  }
+}
+
+/* ─── SYSTEM SETTINGS & LOGS ─────────────────────── */
+function renderSettings(body) {
+  if (S.role !== 'admin') {
+    body.innerHTML = accessDenied('ti-lock','Admin Access Required','System settings are only available to administrators.');
+    return;
+  }
+  body.innerHTML = `<div class="card">
+    <div class="card-hdr"><div class="card-title">System Settings &amp; Database</div></div>
+    <div style="padding:20px">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:18px">
+        <div style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:6px">${dbBackend==='firestore'
+          ? '🔥 Database: <span style="color:#16a34a">Firebase Firestore (NoSQL) — Connected</span>'
+          : '⚠ Database: <span style="color:#dc2626">Offline mode (Local JSON) — Not connected to Firebase</span>'}</div>
+        ${dbBackend==='firestore' ? '' : `<div style="font-size:11px;color:#b91c1c;margin-bottom:8px;line-height:1.6">Dahilan: ${esc(dbWhy||'—')}<br>Ayusin ang <b>firebase-config.js</b> at i-click ang Retry. Hanggang hindi nakakonekta, sa browser lang na ito nase-save ang data.</div>`}
+        <div style="font-size:11px;color:#6b7280;margin-bottom:10px;line-height:1.6">${authMode ? '🔐 Login: Firebase Authentication (Email/Password)<br>' : ''}Collections: exams ${exams.length} · question_bank ${qbank.length} · students ${students.length} · exam_results ${results.length}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="exportDatabase()">⬇ Export database.json</button>
+          <button class="btn btn-sm" onclick="document.getElementById('db-import-file').click()">⬆ Import database.json</button>
+          <button class="btn btn-sm" onclick="reconnectDatabase()">↻ Retry Firebase</button>
+          <button class="btn btn-red btn-sm" onclick="resetDatabase()">Reset to Default</button>
+          <input type="file" id="db-import-file" accept=".json,application/json" style="display:none" onchange="importDatabase(this)">
+        </div>
+      </div>
+
+      ${[
+        ['examNotifications','Exam Notifications','Enable exam-related notifications.'],
+        ['autoGrading','Automatic Grading','Automatically calculate objective exam scores.'],
+        ['antiCheating','Anti-Cheating Monitoring','Enable basic exam activity monitoring.'],
+        ['resultNotifications','Result Notifications','Enable result notification behavior.']
+      ].map(([key,title,desc],i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;${i<3?'border-bottom:.5px solid #e2e5ee':''}">
+        <div><div style="font-size:13px;font-weight:600">${title}</div><div style="font-size:11px;color:#9ca3af;margin-top:3px">${desc}</div></div>
+        <input type="checkbox" ${systemSettings[key]?'checked':''} onchange="updateSetting('${key}', this.checked)">
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function exportDatabase() {
+  try {
+    const snap = await db.snapshot();
+    const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'database.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (e) { alert('❌ Export failed: ' + (e.message || e)); }
+}
+
+function importDatabase(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      if (!obj || typeof obj !== 'object' || !Array.isArray(obj.users) || !Array.isArray(obj.exams)) {
+        throw new Error('Hindi valid ang database.json (kailangan ng "users" at "exams").');
+      }
+      if (!confirm('Papalitan ng laman ng file ang kasalukuyang database (' + (dbBackend === 'firestore' ? 'Firebase Firestore' : 'Local JSON') + '). Tuloy?')) { input.value = ''; return; }
+      await db.replaceAll(obj);
+      await loadAllData();
+      alert('✅ Na-import ang database.json');
+      render();
+    } catch (e) {
+      alert('❌ Import failed: ' + (e.message || e));
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+async function resetDatabase() {
+  if (!confirm('Ibabalik sa default ang buong database. Mabubura ang lahat ng binago mo. Tuloy?')) return;
+  try {
+    await db.reset();
+    await loadAllData();
+    alert('✅ Naibalik sa default ang database.');
+    render();
+  } catch (e) { alert('❌ Reset failed: ' + (e.message || e)); }
+}
+
+async function updateSetting(key, val) {
+  systemSettings[key] = val;
+  const value = val ? 'true' : 'false';
+  const { data, error } = await db.from('system_settings').update({ setting_value: value }).eq('setting_key', key).select();
+  if (error) { alert('Hindi na-save ang setting: ' + error.message); return; }
+  if (!data || !data.length) {   // wala pang row para sa setting na ito, kaya gagawa
+    const { error: e2 } = await db.from('system_settings').insert({ setting_key: key, setting_name: key, setting_value: value });
+    if (e2) alert('Hindi na-save ang setting: ' + e2.message);
+  }
+}
+
+async function addDbLog(action, user, userId = null) {
+  addLog(action, user);
+  if (db) {
+    try {
+      await db.from('exam_logs').insert({ action, user_name: user, user_id: userId });
+    } catch(e){}
+  }
+}
+
+function addLog(action, user) {
+  const now = new Date();
+  examLogs.unshift({action, user:user || S.displayName || 'System', date:now.toLocaleString()});
+}
+
+function renderLogs(body) {
+  if (S.role !== 'admin') {
+    body.innerHTML = accessDenied('ti-lock','Admin Access Required','Exam logs are only available to administrators.');
+    return;
+  }
+  body.innerHTML = `<div class="card">
+    <div class="card-hdr"><div class="card-title">Exam &amp; System Logs</div></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Action</th><th>User</th><th>Date &amp; Time</th></tr></thead>
+      <tbody>
+      ${examLogs.map(l=>`<tr><td>${esc(l.action)}</td><td>${esc(l.user)}</td><td>${l.date}</td></tr>`).join('')}
+      ${!examLogs.length?'<tr><td colspan="3" style="text-align:center;color:#9ca3af;padding:28px">No logs yet.</td></tr>':''}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function accessDenied(icon,title,sub){
+  return `<div class="card"><div class="access-denied">
+    <i class="ti ${icon}"></i>
+    <div class="access-denied-title">${title}</div>
+    <div class="access-denied-sub">${sub}</div>
+  </div></div>`;
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  EXAM CREATION & EDITING                           */
+/* ══════════════════════════════════════════════════ */
+function openCreateExam(){
+  editingExamId=null; questionBlocks=[];
+  $('modal-exam-title').textContent='Create Exam';
+  ['ex-title','ex-desc'].forEach(id=>{$(id).value=''});
+  ['ex-subject','ex-dur','ex-pass'].forEach(id=>{$(id).value=''});
+  if($('ex-start-window')) $('ex-start-window').value='';
+  if($('ex-end-window')) $('ex-end-window').value='';
+  if($('ex-access-codes')) $('ex-access-codes').value='';
+  if($('ex-ip-whitelist')) $('ex-ip-whitelist').value='';
+  $('questions-container').innerHTML='<div style="color:#9ca3af;font-size:12px;text-align:center;padding:16px 0">No questions yet. Click "Add Question" above.</div>';
+  openModal('modal-exam');
+}
+
+function openEditExam(id){
+  const e=exams.find(x=>x.id===id); if(!e) return;
+  editingExamId=id;
+  $('modal-exam-title').textContent='Edit Exam';
+  $('ex-title').value=e.title; $('ex-desc').value=e.desc||'';
+  $('ex-subject').value=e.subject; $('ex-dur').value=e.duration; $('ex-pass').value=e.pass;
+  if($('ex-start-window')) $('ex-start-window').value=e.startWindow||'';
+  if($('ex-end-window')) $('ex-end-window').value=e.endWindow||'';
+  if($('ex-access-codes')) $('ex-access-codes').value=(e.accessCodes&&e.accessCodes.length)?e.accessCodes.join(', '):(e.accessCode||'');
+  if($('ex-ip-whitelist')) $('ex-ip-whitelist').value=(e.ipWhitelist&&e.ipWhitelist.length)?e.ipWhitelist.join(', '):'';
+  questionBlocks=(e.questions||[]).map((q,i)=>({...q,choices:(q.choices||[]).slice(),_id:i}));
+  _qid=Math.max(_qid,questionBlocks.length);
+  renderQuestionBlocks();
+  openModal('modal-exam');
+}
+
+function generateAccessCodes(){
+  const codes=[];
+  for(let i=0;i<1;i++){
+    codes.push(Math.random().toString(36).substring(2,8).toUpperCase());
+  }
+  if($('ex-access-codes')) $('ex-access-codes').value=codes.join(', ');
+}
+
+function addQuestion(){
+  questionBlocks.push({_id:_qid++,text:'',type:'mc',choices:['','','',''],answer:0});
+  renderQuestionBlocks();
+}
+
+function renderQuestionBlocks(){
+  const c=$('questions-container');
+  if(!questionBlocks.length){
+    c.innerHTML='<div style="color:#9ca3af;font-size:12px;text-align:center;padding:16px 0">No questions yet. Click "Add Question" above.</div>';
+    return;
+  }
+  c.innerHTML=questionBlocks.map((q,i)=>`
+  <div class="q-block" id="qblk-${q._id}">
+    <div class="q-block-hdr">
+      <div class="q-block-num">Question ${i+1}</div>
+      <button class="btn btn-icon btn-sm btn-red" onclick="removeQuestion(${q._id})"><i class="ti ti-trash" style="font-size:12px"></i></button>
+    </div>
+    <div class="fi"><label>Question Text *</label>
+      <textarea oninput="updateQ(${q._id},'text',this.value)" placeholder="Enter question...">${esc(q.text)}</textarea>
+    </div>
+    <div class="fi"><label>Type</label>
+      <select onchange="changeQType(${q._id},this.value)">
+        <option value="mc" ${q.type==='mc'?'selected':''}>Multiple Choice</option>
+        <option value="tf" ${q.type==='tf'?'selected':''}>True / False</option>
+        <option value="sa" ${q.type==='sa'?'selected':''}>Short Answer</option>
+      </select>
+    </div>
+    ${q.type==='mc'?renderMCChoices(q):q.type==='tf'?renderTFChoices(q):`<div class="fi"><label>Correct Answer (optional — for auto-grading)</label><input type="text" value="${esc(typeof q.answer==='string'?q.answer:'')}" oninput="updateQ(${q._id},'answer',this.value)" placeholder="e.g. 6   (use | for alternatives: 6|six)"></div><div style="font-size:11px;color:#9ca3af">Kapag walang nakalagay, anumang sagot na hindi blangko ay bibilangin na tama.</div>`}
+  </div>`).join('');
+}
+
+function renderMCChoices(q){
+  return `<div class="fi"><label>Choices &amp; Correct Answer (tick correct)</label>
+  ${q.choices.map((c,ci)=>`<div class="choice-row">
+    <input type="radio" name="ans-${q._id}" ${q.answer===ci?'checked':''} onchange="updateQ(${q._id},'answer',${ci})">
+    <input type="text" value="${esc(c)}" oninput="updateChoice(${q._id},${ci},this.value)" placeholder="Choice ${ci+1}">
+    ${q.choices.length>2?`<button class="btn btn-icon btn-sm" onclick="removeChoice(${q._id},${ci})" style="flex-shrink:0;padding:4px 7px"><i class="ti ti-x" style="font-size:11px"></i></button>`:''}
+  </div>`).join('')}
+  <button class="add-choice-btn" onclick="addChoice(${q._id})"><i class="ti ti-plus" style="font-size:11px"></i> Add Choice</button>
+  </div>`;
+}
+
+function renderTFChoices(q){
+  return `<div class="fi"><label>Correct Answer</label>
+  <div class="choice-row"><input type="radio" name="ans-${q._id}" ${q.answer===0?'checked':''} onchange="updateQ(${q._id},'answer',0)"><input type="text" value="True" readonly style="background:#f9fafb"></div>
+  <div class="choice-row"><input type="radio" name="ans-${q._id}" ${q.answer===1?'checked':''} onchange="updateQ(${q._id},'answer',1)"><input type="text" value="False" readonly style="background:#f9fafb"></div>
+  </div>`;
+}
+
+function updateQ(qid,field,val){ const q=questionBlocks.find(x=>x._id===qid); if(q) q[field]=(field==='answer'&&q.type!=='sa')?parseInt(val):val; }
+function changeQType(qid,type){
+  const q=questionBlocks.find(x=>x._id===qid); if(!q) return;
+  q.type=type; q.answer=(type==='sa')?'':0;
+  if(type==='mc') q.choices=['','','',''];
+  else if(type==='tf') q.choices=['True','False'];
+  else q.choices=[];
+  renderQuestionBlocks();
+}
+function addChoice(qid){ const q=questionBlocks.find(x=>x._id===qid); if(q){q.choices.push('');renderQuestionBlocks();} }
+function removeChoice(qid,ci){ const q=questionBlocks.find(x=>x._id===qid); if(!q) return; q.choices.splice(ci,1); if(q.answer>=q.choices.length) q.answer=0; renderQuestionBlocks(); }
+function updateChoice(qid,ci,val){ const q=questionBlocks.find(x=>x._id===qid); if(q) q.choices[ci]=val; }
+function removeQuestion(qid){ questionBlocks=questionBlocks.filter(x=>x._id!==qid); renderQuestionBlocks(); }
+
+async function saveExam(){
+  const title=$('ex-title').value.trim(), subject=$('ex-subject').value;
+  const dur=parseInt($('ex-dur').value), pass=parseInt($('ex-pass').value);
+  if(!title||!subject||!dur||!pass){ alert('Please fill in all required fields.'); return; }
+  if(dur<1){ alert('Duration must be at least 1 minute.'); return; }
+  if(pass<1||pass>100){ alert('Passing score must be between 1 and 100.'); return; }
+  for(let i=0;i<questionBlocks.length;i++){
+    const q=questionBlocks[i];
+    if(!q.text||!q.text.trim()){ alert('Question '+(i+1)+' has no text.'); return; }
+    if(q.type==='mc'&&(q.choices||[]).some(c=>!String(c).trim())){ alert('Question '+(i+1)+': please fill in all choices (or remove the empty ones).'); return; }
+  }
+  const cleanQ=questionBlocks.map(q=>({
+    text:q.text.trim(), type:q.type,
+    choices:q.type==='sa'?[]:q.choices,
+    answer:q.type==='sa'?((q.answer==null||typeof q.answer==='number')?'':String(q.answer).trim()):q.answer
+  }));
+
+  const startWindow = $('ex-start-window') ? $('ex-start-window').value : '';
+  const endWindow = $('ex-end-window') ? $('ex-end-window').value : '';
+  const codesRaw = $('ex-access-codes') ? $('ex-access-codes').value.trim() : '';
+  const accessCodes = codesRaw ? codesRaw.split(',').map(c=>c.trim().toUpperCase()).filter(Boolean) : [];
+  const ipRaw = $('ex-ip-whitelist') ? $('ex-ip-whitelist').value.trim() : '';
+  const ipWhitelist = ipRaw ? ipRaw.split(',').map(i=>i.trim()).filter(Boolean) : [];
+
+  if (db) {
+    try {
+      let examId = editingExamId;
+      const securityPayload = {
+        start_window: startWindow || null,
+        end_window: endWindow || null,
+        access_codes: accessCodes.length ? accessCodes : null,
+        ip_whitelist: ipWhitelist.length ? ipWhitelist : null
+      };
+      if (examId) {
+        const { error: updErr } = await db.from('exams').update({
+          title, subject, description: $('ex-desc').value.trim(), duration: dur, pass_score: pass, ...securityPayload
+        }).eq('id', examId);
+        if (updErr) {
+          console.warn('⚠️ Update with security fields failed, retrying without them:', updErr.message);
+          await db.from('exams').update({
+            title, subject, description: $('ex-desc').value.trim(), duration: dur, pass_score: pass
+          }).eq('id', examId);
+        }
+        await db.from('questions').delete().eq('exam_id', examId);
+      } else {
+        let newExam;
+        const { data: insData, error: insErr } = await db.from('exams').insert({
+          title, subject, description: $('ex-desc').value.trim(), duration: dur, pass_score: pass, created_by: S.userId, ...securityPayload
+        }).select().single();
+        if (insErr) {
+          console.warn('⚠️ Insert with security fields failed, retrying without them:', insErr.message);
+          const res = await db.from('exams').insert({
+            title, subject, description: $('ex-desc').value.trim(), duration: dur, pass_score: pass, created_by: S.userId
+          }).select().single();
+          if (res.error) throw res.error;
+          newExam = res.data;
+        } else {
+          newExam = insData;
+        }
+        examId = newExam.id;
+      }
+
+      // Insert questions — choices are stored directly as a JSON column on
+      // the "questions" row itself (no more separate question_choices table).
+      for (let i = 0; i < cleanQ.length; i++) {
+        const q = cleanQ[i];
+        const { error: qErr } = await db.from('questions').insert({
+          exam_id: examId,
+          question_text: q.text,
+          type: q.type,
+          correct_answer_index: q.type !== 'sa' ? q.answer : null,
+          correct_answer_text: q.type === 'sa' ? q.answer : null,
+          order_index: i + 1,
+          choices: q.choices && q.choices.length ? q.choices : null
+        });
+        if (qErr) throw qErr;
+      }
+
+      // Idagdag din sa Question Bank ang bawat tanong ng exam (hindi madodoble kung nandoon na)
+      const seenBank = new Set(qbank.map(b => bankKey(b.text, b.type)));
+      for (const q of cleanQ) {
+        const k = bankKey(q.text, q.type);
+        if (seenBank.has(k)) continue;
+        seenBank.add(k);
+        const { error: bErr } = await db.from('question_bank').insert({
+          question_text: q.text, subject, type: q.type, difficulty: 'Medium',
+          correct_answer_index: q.type !== 'sa' ? q.answer : null,
+          correct_answer_text: q.type === 'sa' ? q.answer : null,
+          choices: (q.type !== 'sa' && q.choices && q.choices.length) ? q.choices : null,
+          created_by: S.userId != null ? S.userId : null
+        });
+        if (bErr) throw bErr;
+      }
+
+      await addDbLog(`${editingExamId?'Updated':'Created'} exam: ${title}`, S.displayName, S.userId);
+      await loadAllData();
+    } catch(err) {
+      console.error('Error saving exam:', err);
+      alert('Hindi na-save ang exam: ' + (err.message || err));
+      return;
+    }
+  }
+  closeModal('modal-exam'); render();
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  QUESTION BANK MODAL                               */
+/* ══════════════════════════════════════════════════ */
+function openAddQB(){
+  qbEditId=null; $('modal-qbank-title').textContent='Add Question';
+  ['qb-text'].forEach(id=>{$(id).value=''});
+  ['qb-subject','qb-type','qb-diff'].forEach(id=>{$(id).value=''});
+  $('qb-type-fields').innerHTML='';
+  openModal('modal-qbank');
+}
+
+function openEditQB(id){
+  const q=qbank.find(x=>x.id===id); if(!q) return;
+  qbEditId=id; $('modal-qbank-title').textContent='Edit Question';
+  $('qb-text').value=q.text; $('qb-subject').value=q.subject;
+  $('qb-type').value=q.type; $('qb-diff').value=q.diff;
+  renderQBTypeFields(q); openModal('modal-qbank');
+}
+
+function renderQBTypeFields(existing){
+  const type=$('qb-type').value, c=$('qb-type-fields');
+  if(type==='mc'){
+    const chs=existing?existing.choices:['','','',''], ans=existing?existing.answer:0;
+    c.innerHTML=`<div class="fi"><label>Choices &amp; Correct Answer</label>
+    ${chs.map((ch,i)=>`<div class="choice-row">
+      <input type="radio" name="qb-ans" ${ans===i?'checked':''} value="${i}">
+      <input type="text" id="qbc-${i}" value="${esc(ch)}" placeholder="Choice ${i+1}">
+    </div>`).join('')}
+    </div>`;
+  } else if(type==='tf'){
+    const ans=existing?existing.answer:0;
+    c.innerHTML=`<div class="fi"><label>Correct Answer</label>
+    <div class="choice-row"><input type="radio" name="qb-ans" value="0" ${ans===0?'checked':''}><input type="text" value="True" readonly style="background:#f9fafb"></div>
+    <div class="choice-row"><input type="radio" name="qb-ans" value="1" ${ans===1?'checked':''}><input type="text" value="False" readonly style="background:#f9fafb"></div>
+    </div>`;
+  } else if(type==='sa'){
+    c.innerHTML=`<div class="fi"><label>Model Answer (optional)</label><input type="text" id="qb-sa-ans" value="${existing&&existing.answer?esc(existing.answer):''}" placeholder="e.g. x = 4"></div>`;
+  } else { c.innerHTML=''; }
+}
+
+async function saveQBQuestion(){
+  const text=$('qb-text').value.trim(), subject=$('qb-subject').value;
+  const type=$('qb-type').value, diff=$('qb-diff').value;
+  if(!text||!subject||!type||!diff){ alert('Please fill in all required fields.'); return; }
+  let choices=[],answer=0;
+  if(type==='mc'){
+    for(let i=0;i<4;i++){const el=$('qbc-'+i);if(el)choices.push(el.value);}
+    const r=document.querySelector('input[name="qb-ans"]:checked'); if(r) answer=parseInt(r.value);
+  } else if(type==='tf'){
+    choices=['True','False'];
+    const r=document.querySelector('input[name="qb-ans"]:checked'); if(r) answer=parseInt(r.value);
+  } else if(type==='sa'){
+    const sa=$('qb-sa-ans'); answer=sa?sa.value.trim():'';
+  }
+
+  if (db) {
+    try {
+      // Choices are stored directly as a JSON column on the "question_bank"
+      // row itself (no more separate question_bank_choices table).
+      const choicesPayload = (choices && choices.length && (type === 'mc' || type === 'tf')) ? choices : null;
+      let qbId = qbEditId;
+      if (qbId) {
+        const upd = await db.from('question_bank').update({
+          question_text: text, subject, type, difficulty: diff,
+          correct_answer_index: type !== 'sa' ? answer : null,
+          correct_answer_text: type === 'sa' ? answer : null,
+          choices: choicesPayload
+        }).eq('id', qbId);
+        if (upd.error) throw upd.error;
+      } else {
+        const ins = await db.from('question_bank').insert({
+          question_text: text, subject, type, difficulty: diff,
+          correct_answer_index: type !== 'sa' ? answer : null,
+          correct_answer_text: type === 'sa' ? answer : null,
+          choices: choicesPayload,
+          created_by: S.userId != null ? S.userId : null
+        });
+        if (ins.error) throw ins.error;
+      }
+
+      await addDbLog(`${qbEditId?'Updated':'Added'} question in bank: ${text.slice(0,35)}`, S.displayName);
+      await loadAllData();
+    } catch(err) {
+      console.error('Error saving question bank:', err);
+      alert('Hindi na-save ang question: ' + (err.message || err));
+      return;
+    }
+  }
+
+  closeModal('modal-qbank'); render();
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  DELETE CONFIRMATION                               */
+/* ══════════════════════════════════════════════════ */
+function confirmDelete(kind,id,label){
+  $('confirm-msg').textContent=`Are you sure you want to delete "${label}"? This cannot be undone.`;
+  const btn=$('confirm-ok-btn');
+  btn.onclick=async()=>{
+    if (db) {
+      if(kind==='exam') await db.from('exams').delete().eq('id', id);
+      if(kind==='qb') await db.from('question_bank').delete().eq('id', id);
+      if(kind==='student') await db.from('users').delete().eq('id', id);
+      await addDbLog(`Deleted ${kind}: ${label}`, S.displayName);
+      await loadAllData();
+    }
+    closeModal('modal-confirm');
+    render();
+  };
+  openModal('modal-confirm');
+}
+
+function openModal(id){$(id).classList.add('open')}
+function closeModal(id){$(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+
+/* ══════════════════════════════════════════════════ */
+/*  ANTI-CHEATING / RANDOMIZATION / ACCESS CONTROL    */
+/* ══════════════════════════════════════════════════ */
+function shuffleArray(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function prepareRandomizedExam(e){
+  let qs = shuffleArray(e.questions||[]);
+  qs = qs.map(q=>{
+    if(!q.choices || !q.choices.length) return {...q};
+    const order = shuffleArray(q.choices.map((c,i)=>i));
+    const newChoices = order.map(i=>q.choices[i]);
+    const newAnswer = order.indexOf(q.answer);
+    return {...q, choices:newChoices, answer:newAnswer};
+  });
+  return {...e, questions:qs};
+}
+
+async function checkIpAllowed(e){
+  if(!e.ipWhitelist || !e.ipWhitelist.length) return true;
+  try {
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    return e.ipWhitelist.includes(data.ip);
+  } catch(err){
+    console.warn('IP check failed (network blocked or offline) — allowing access by default:', err);
+    return true;
+  }
+}
+
+let examViolations = 0;
+const MAX_VIOLATIONS = 3;
+
+function attachAntiCheatListeners(){
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+}
+function detachAntiCheatListeners(){
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  const el = $('violation-banner');
+  if(el) el.remove();
+}
+function handleVisibilityChange(){
+  if(document.hidden && $('exam-screen').style.display==='block'){
+    registerViolation('Switched tabs or minimized the window');
+  }
+}
+function handleFullscreenChange(){
+  if(!document.fullscreenElement && $('exam-screen').style.display==='block'){
+    registerViolation('Exited fullscreen mode');
+  }
+}
+function registerViolation(reason){
+  if(!systemSettings.antiCheating) return;
+  examViolations++;
+  addDbLog(`Anti-cheat warning ${examViolations}/${MAX_VIOLATIONS} (${reason})`, S.displayName, S.userId);
+  showViolationBanner(reason);
+  if(examViolations>=MAX_VIOLATIONS){
+    alert('Maximum number of activity warnings reached. Your exam will be submitted automatically.');
+    submitExam();
+  }
+}
+function showViolationBanner(reason){
+  let el=$('violation-banner');
+  if(!el){
+    el=document.createElement('div');
+    el.id='violation-banner';
+    el.style.cssText='position:fixed;top:0;left:0;right:0;background:#ef4444;color:#fff;padding:10px 20px;text-align:center;font-size:13px;font-weight:600;z-index:2000';
+    document.body.appendChild(el);
+  }
+  el.textContent=`⚠ Warning ${examViolations}/${MAX_VIOLATIONS}: ${reason}. Repeated violations will auto-submit your exam.`;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{ if(el&&el.parentNode) el.remove(); },5000);
+}
+function requestExamFullscreen(){
+  const el=document.documentElement;
+  const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
+  if(req){ req.call(el).catch(()=>{}); }
+}
+function exitFullscreenIfActive(){
+  if(document.fullscreenElement){
+    (document.exitFullscreen||function(){}).call(document).catch(()=>{});
+  }
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  EXAM TAKING                                       */
+/* ══════════════════════════════════════════════════ */
+let pendingExamId = null;
+
+/* ── Isang pasok lang kada account kada exam (admin preview ay exempted) ── */
+const entryId = e => e.id + '_' + S.userId;
+const entryApplies = () => S.role === 'student' && S.userId != null;
+async function recordBlocked(e, entry) {
+  alert('Nakapasok na ang account na ito sa exam na ito, kaya hindi na ito mabubuksan ulit. Kung may problema (halimbawa, nag-crash ang browser), makipag-ugnayan sa teacher.');
+  try {
+    await db.from('exam_entries').update({ blocked_attempts: ((entry && entry.blocked_attempts) || 0) + 1 }).eq('id', entryId(e));
+    await addDbLog('Blocked re-entry: ' + S.displayName + ' → ' + e.title, S.displayName, S.userId);
+  } catch (err) { console.warn(err); }
+}
+async function checkEntryBlocked(e) {
+  if (!entryApplies()) return false;
+  const { data } = await db.from('exam_entries').select('*').eq('id', entryId(e)).maybeSingle();
+  if (!data) return false;
+  await recordBlocked(e, data);
+  return true;
+}
+
+async function startExam(id){
+  if (S.role === 'teacher') { alert('Teachers manage exams and review class performance. Student accounts take the exams.'); return; }
+  const e=exams.find(x=>x.id===id); if(!e) return;
+  if (await checkEntryBlocked(e)) return;   // nakapasok na ang account na ito sa exam na ito
+
+  const now = new Date();
+  if(e.startWindow){
+    const sw = new Date(e.startWindow);
+    if(now < sw){ alert('This exam is not open yet. It becomes available on '+sw.toLocaleString()+'.'); return; }
+  }
+  if(e.endWindow){
+    const ew = new Date(e.endWindow);
+    if(now > ew){ alert('This exam window has closed. It was available until '+ew.toLocaleString()+'.'); return; }
+  }
+
+  const needsCode = e.accessCode || (e.accessCodes && e.accessCodes.length);
+  if(needsCode){
+    pendingExamId = id;
+    $('access-code-input').value='';
+    $('access-code-err').style.display='none';
+    openModal('modal-access');
+    setTimeout(()=>{ $('access-code-input').focus(); },100);
+    return;
+  }
+
+  proceedStartExam(e);
+}
+
+/* ══════════════════════════════════════════════════ */
+/*  ACCESS CODE VERIFICATION — iisang shared code ng teacher para sa klase.
+    Ang pagpigil sa ikalawang pasok ay nasa exam_entries (isang pasok kada account kada exam). */
+/* ══════════════════════════════════════════════════ */
+async function verifyAccessCode(){
+  const e=exams.find(x=>x.id===pendingExamId); if(!e) return;
+  const entered=$('access-code-input').value.trim().toUpperCase();
+  let valid=false;
+
+  if(e.accessCodes && e.accessCodes.length){
+    valid = e.accessCodes.some(c=>c.toUpperCase()===entered);
+  } else if(e.accessCode){
+    valid = (entered === e.accessCode.toUpperCase());
+  }
+
+  if(!entered || !valid){
+    $('access-code-err').style.display='block';
+    return;
+  }
+
+  closeModal('modal-access');
+  proceedStartExam(e);
+}
+
+async function proceedStartExam(e){
+  const ipOk = await checkIpAllowed(e);
+  if(!ipOk){
+    alert('This exam can only be accessed from an approved network or location.');
+    return;
+  }
+
+  if (entryApplies()) {
+    const row = { id: entryId(e), exam_id: e.id, exam_title: e.title, user_id: S.userId, student_name: S.displayName,
+                  entered_at: nowISO(), status: 'In progress', blocked_attempts: 0, submitted_at: null };
+    let res;
+    try { res = await db._drv.claim('exam_entries', row.id, row); }
+    catch (err) { alert('Hindi ma-record ang pagpasok mo sa exam: ' + friendlyDbError(err)); return; }
+    if (!res.ok) { await recordBlocked(e, res.existing); return; }
+  }
+  activeExam=prepareRandomizedExam(e);
+  studentAnswers={};
+  examViolations=0;
+  _submitting=false;
+  addLog('Started exam: '+e.title, S.displayName);
+  timeLeft=e.duration*60;
+  $('et-title').textContent=e.title;
+  $('et-student').textContent='Student: '+S.displayName;
+  renderExamScreen();
+  $('exam-screen').style.display='block';
+  if (systemSettings.antiCheating) { requestExamFullscreen(); attachAntiCheatListeners(); }   // sinusunod ang toggle sa System Settings
+  clearInterval(timerInterval);
+  timerInterval=setInterval(tickTimer,1000);
+  updateTimerDisplay();
+}
+
+function tickTimer(){ timeLeft--; updateTimerDisplay(); if(timeLeft<=0){clearInterval(timerInterval);submitExam();} }
+function updateTimerDisplay(){
+  const m=Math.floor(timeLeft/60),s=timeLeft%60;
+  $('timer-display').textContent=pad(m)+':'+pad(s);
+  const pct=((activeExam.duration*60-timeLeft)/(activeExam.duration*60))*100;
+  $('exam-prog').style.width=pct+'%';
+  $('timer-display').style.color=timeLeft<=60?'#ef4444':'#7fa4f0';
+}
+
+function renderExamScreen(){
+  const qs=activeExam.questions||[];
+  $('exam-content').innerHTML=qs.map((q,i)=>`
+  <div class="exam-q-card">
+    <div class="exam-q-num">Question ${i+1} of ${qs.length}</div>
+    <div class="exam-q-text">${esc(q.text)}</div>
+    ${q.type==='sa'
+      ? `<input type="text" class="form-input" id="sa-${i}" oninput="studentAnswers[${i}]=this.value" placeholder="Type your answer here..." style="margin-top:4px">`
+      : (q.choices||[]).map((c,ci)=>`
+      <div class="choice-opt" onclick="selectChoice(${i},${ci},this)">
+        <input type="radio" name="q${i}" value="${ci}" onchange="studentAnswers[${i}]=${ci}">
+        <label>${esc(c)}</label>
+      </div>`).join('')
+    }
+  </div>`).join('')+`
+  <div class="exam-nav">
+    <div style="font-size:12px;color:#9ca3af">${qs.length} question${qs.length!==1?'s':''} total</div>
+    <button class="exam-submit-btn" onclick="submitExam()">Submit Exam</button>
+  </div>`;
+}
+
+function selectChoice(qi,ci,el){
+  document.querySelectorAll(`input[name="q${qi}"]`).forEach(r=>r.checked=false);
+  document.querySelectorAll('.exam-q-card')[qi].querySelectorAll('.choice-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input[type=radio]').checked=true;
+  studentAnswers[qi]=ci;
+}
+
+let _submitting=false;
+async function submitExam(){
+  if(_submitting||!activeExam) return;
+  _submitting=true;
+  clearInterval(timerInterval);
+  detachAntiCheatListeners();
+  exitFullscreenIfActive();
+  const qs=activeExam.questions||[];
+  let correct=0;
+  qs.forEach((q,i)=>{ if(isAnswerCorrect(q, studentAnswers[i])) correct++; });
+  const pct=qs.length?Math.round(correct/qs.length*100):0;
+  const passed=pct>=activeExam.pass;
+
+  if (db) {
+    try {
+      // Per-question answers are stored directly as a JSON "answers" column
+      // on the exam_results row itself (no more separate
+      // exam_attempt_answers table).
+      const answersPayload = qs.map((q, idx) => ({
+        question_id: q.id,
+        selected_choice_index: q.type !== 'sa' ? studentAnswers[idx] : null,
+        answer_text: q.type === 'sa' ? studentAnswers[idx] : null,
+        is_correct: isAnswerCorrect(q, studentAnswers[idx])
+      }));
+
+      const { error: resErr } = await db.from('exam_results').insert({
+        exam_id: activeExam.id,
+        user_id: S.userId,
+        student_name: S.displayName,
+        exam_title: activeExam.title,
+        total_questions: qs.length,
+        correct_answers: correct,
+        score_percentage: pct,
+        passed: passed,
+        answers: answersPayload
+      });
+      if (resErr) throw resErr;
+      if (entryApplies()) await db.from('exam_entries').update({ status: 'Submitted', submitted_at: nowISO() }).eq('id', entryId(activeExam));
+
+      const { data: curEx } = await db.from('exams').select('attempts_count').eq('id', activeExam.id).maybeSingle();
+      await db.from('exams').update({ attempts_count: ((curEx && curEx.attempts_count) || 0) + 1 }).eq('id', activeExam.id);
+      await addDbLog(`Submitted exam: ${activeExam.title} (${pct}%)`, S.displayName, S.userId);
+      await loadAllData();
+    } catch(err) {
+      console.error('Error submitting exam:', err);
+      alert('Hindi na-save ang resulta sa database: ' + (err.message || err));
+    }
+  }
+
+  $('exam-screen').style.display='none';
+  showResultScreen(pct,passed,correct,qs.length);
+}
+
+function showResultScreen(pct,passed,correct,total){
+  $('r-icon').textContent=passed?'🎉':'😔';
+  $('r-title').textContent=passed?'Congratulations, '+S.displayName+'!':'Keep Practicing, '+S.displayName+'!';
+  $('r-sub').textContent=passed?'You passed the exam!':'You did not meet the passing score this time.';
+  $('r-score').textContent=pct+'%';
+  $('r-score').className='result-score '+(passed?'pass':'fail');
+  $('r-status').textContent=passed?'Passed':'Failed';
+  $('r-status').className='result-status '+(passed?'pass':'fail');
+  $('r-details').innerHTML=`
+    <div class="rd-item"><div class="rd-lbl">Correct Answers</div><div class="rd-val">${correct} / ${total}</div></div>
+    <div class="rd-item"><div class="rd-lbl">Passing Score</div><div class="rd-val">${activeExam.pass}%</div></div>
+    <div class="rd-item"><div class="rd-lbl">Your Score</div><div class="rd-val">${pct}%</div></div>
+    <div class="rd-item"><div class="rd-lbl">Result</div><div class="rd-val" style="color:${passed?'#1d9e75':'#ef4444'}">${passed?'Passed ✓':'Failed ✗'}</div></div>`;
+  $('result-screen').style.display='block';
+}
+
+function closeResult(){ $('result-screen').style.display='none'; nav('take'); }
+
+/* ─── UTILS ──────────────────────────────────────── */
+function $(id){return document.getElementById(id)}
+/* Grading: MC/TF = tamang index. Short Answer = ikumpara sa model answer (hindi case-sensitive; gamitin ang | para sa maraming tamang sagot).
+   Kung walang model answer, bibilangin na tama ang kahit anong sagot na hindi blangko. */
+function isAnswerCorrect(q, a){
+  if(q.type==='sa'){
+    const given=(a==null?'':String(a)).trim().toLowerCase();
+    if(!given) return false;
+    const model=(typeof q.answer==='string')?q.answer.trim().toLowerCase():'';
+    if(!model) return true;
+    return model.split('|').map(s=>s.trim()).includes(given);
+  }
+  return a===q.answer;
+}
+const bankKey = (t, ty) => String(ty) + '|' + String(t || '').trim().toLowerCase();
+function pad(n){return String(n).padStart(2,'0')}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function escQ(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/\n/g,' ')}
+
+/* Start database connection */
+dbReady = initDatabase();
+
+/* Enter key support */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  if($('admin-login-page').style.display==='flex') doAdminLogin();
+  if($('student-login-page').style.display==='flex') doStudentLogin();
+  if($('teacher-login-page').style.display==='flex') doTeacherLogin();
+  if($('modal-access').classList.contains('open')) verifyAccessCode();
+});
+</script>
+</body>
+</html>
